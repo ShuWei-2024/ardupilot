@@ -357,6 +357,10 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(WIND);
         send_wind();
         break;
+    
+    case MSG_FORCETORQUE:
+        send_forcetorque();
+        break;
 
     case MSG_SERVO_OUT:
     case MSG_AOA_SSA:
@@ -546,6 +550,9 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_WIND,
 #if AP_RANGEFINDER_ENABLED
     MSG_RANGEFINDER,
+#endif
+#if AC_FORCETORQUE_ENABLED
+    MSG_FORCETORQUE,
 #endif
     MSG_DISTANCE_SENSOR,
 #if AP_TERRAIN_AVAILABLE
@@ -1585,6 +1592,26 @@ void GCS_MAVLINK_Copter::send_wind() const
         degrees(atan2f(-wind.y, -wind.x)),
         wind.length(),
         wind.z);
+}
+
+void GCS_MAVLINK_Copter::send_forcetorque() const
+{
+    ForceTorque *forceTorque = AP::forcetorque();
+    if (forceTorque == nullptr)
+    {
+        return;
+    }
+    mavlink_msg_forcetorque_send(
+        chan,
+        // 2,
+        // 2,
+        // 5
+        forceTorque->force_x_N_location(Up_Rotor),
+        forceTorque->force_y_N_location(Up_Rotor),
+        forceTorque->force_z_N_location(Up_Rotor),
+        forceTorque->force_x_N_location(Down_Rotor),
+        forceTorque->force_y_N_location(Down_Rotor),
+        forceTorque->force_z_N_location(Down_Rotor));
 }
 
 #if HAL_HIGH_LATENCY2_ENABLED
