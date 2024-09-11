@@ -9,7 +9,7 @@ extern const AP_HAL::HAL& hal;
 
 #define DR304_FRAME_HEADER1 0x01    // Header1 Byte from DR304_Serial
 #define DR304_FRAME_HEADER2 0x03    // Header2 Byte from DR304_Serial
-#define DR304_FRAME_LENGTH 53
+#define DR304_FRAME_LENGTH 29
 #define DR304_DATA_LENGTH 0x30     // length of Data for Byte of DR304_Serial
 
 #define FORCETORQUE_FORCE_MAX_N 50000
@@ -46,37 +46,13 @@ extern const AP_HAL::HAL& hal;
 // byte 24              Tz_d2           torque in z axis raw data 2 high 8 bits
 // byte 25              Tz_d1           torque in z axis raw data 1 low 8 bits
 // byte 26              Tz_d0           torque in z axis raw data 0 low 8 bits
-// byte 27              Fx_d3           force in x axis raw data 3 high 8 bits
-// byte 28              Fx_d2           force in x axis raw data 2 high 8 bits
-// byte 29              Fx_d1           force in x axis raw data 1 low 8 bits
-// bute 30              Fx_d0           force in x axis raw data 0 low 8 bits
-// byte 31              Fy_d3           force in y axis raw data 3 high 8 bits
-// bute 32              Fy_d2           force in y axis raw data 2 high 8 bits
-// byte 33              Fy_d1           force in y axis raw data 1 low 8 bits
-// byte 34              Fy_d0           force in y axis raw data 0 low 8 bits
-// byte 35              Fz_d3           force in z axis raw data 3 high 8 bits
-// byte 36              Fz_d2           force in z axis raw data 2 high 8 bits
-// byte 37              Fz_d1           force in z axis raw data 1 low 8 bits
-// byte 38              Fz_d0           force in z axis raw data 0 low 8 bits
-// byte 39              Tx_d3           torque in x axis raw data 3 high 8 bits
-// byte 40              Tx_d2           torque in x axis raw data 2 high 8 bits
-// byte 41              Tx_d1           torque in x axis raw data 1 low 8 bits
-// bute 42              Tx_d0           torque in x axis raw data 0 low 8 bits
-// byte 43              Ty_d3           torque in y axis raw data 3 high 8 bits
-// bute 44              Ty_d2           torque in y axis raw data 2 high 8 bits
-// byte 45              Ty_d1           torque in y axis raw data 1 low 8 bits
-// byte 46              Ty_d0           torque in y axis raw data 0 low 8 bits
-// byte 47              Tz_d3           torque in z axis raw data 3 high 8 bits
-// byte 48              Tz_d2           torque in z axis raw data 2 high 8 bits
-// byte 49              Tz_d1           torque in z axis raw data 1 low 8 bits
-// byte 50              Tz_d0           torque in z axis raw data 0 low 8 bits
-// byte 51              Checksum       high 8 bits of Checksum byte, sum of bytes 0 to bytes 50
-// byte 52              Checksum       low  8 bits of Checksum byte, sum of bytes 0 to bytes 50
+// byte 27              Checksum       high 8 bits of Checksum byte, sum of bytes 0 to bytes 26
+// byte 28              Checksum       low  8 bits of Checksum byte, sum of bytes 0 to bytes 26
 
 
 
 // read - return last value measured by sensor
-bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm,Vector3f &reading_force_N2, Vector3f &reading_torque_Nm2)
+bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm)
 {
     if (uart == nullptr) {
         return false;
@@ -88,12 +64,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
     float sum_Tx_Nm = 0;
     float sum_Ty_Nm = 0;
     float sum_Tz_Nm = 0;
-    float sum_fx2_N = 0;
-    float sum_fy2_N = 0;
-    float sum_fz2_N = 0;
-    float sum_Tx2_Nm = 0;
-    float sum_Ty2_Nm = 0;
-    float sum_Tz2_Nm = 0;
     uint16_t count = 0;
     uint16_t count_out_of_positive_range = 0;
     uint16_t count_out_of_negtive_range = 0;
@@ -116,18 +86,20 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                 // hal.console->printf("0x01 well \n");
             }
         } 
-        else if 
-        (linebuf_len == 1) {
+        else if (linebuf_len == 1) {
             // if buffer has 1 element and this byte is 0x03, add it to buffer
             // if not clear the buffer
             if (c == DR304_FRAME_HEADER2) {
                 linebuf[linebuf_len++] = c;
                 //hal.console->printf("0x03 well \n");
-            } else {
+            } else if (c == 0x10) {
+                linebuf[linebuf_len++] = c;
+                resolve_mode = 1;
+            }else {
                 linebuf_len = 0;
             }
         } 
-        else 
+        else if (resolve_mode == 0 && zero_flag == 1)
         {
             // hal.console->printf("begin cal f and t \n");
              // add character to buffer
@@ -158,20 +130,7 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                     int32_t Ty_raw = ((uint32_t)linebuf[19] << 24) | ((uint32_t)linebuf[20] << 16) | ((uint16_t)linebuf[21] << 8) | linebuf[22];
                     // calculate Tz raw data.The obtained data needs to be restored using two's complement.
                     int32_t Tz_raw = ((uint32_t)linebuf[23] << 24) | ((uint32_t)linebuf[24] << 16) | ((uint16_t)linebuf[25] << 8) | linebuf[26];
-                    // calculate Fx raw data.The obtained data needs to be restored using two's complement.
-                    int32_t fx2_raw = ((uint32_t)linebuf[27] << 24) | ((uint32_t)linebuf[28] << 16) | ((uint16_t)linebuf[29] << 8) | linebuf[30];
-                     // hal.console->printf("%08x",fx_raw);
-                    // calculate Fy raw data.The obtained data needs to be restored using two's complement.
-                    int32_t fy2_raw = ((uint32_t)linebuf[31] << 24) | ((uint32_t)linebuf[32] << 16) | ((uint16_t)linebuf[33] << 8) | linebuf[34];
-                    // calculate Fz raw data.The obtained data needs to be restored using two's complement.
-                    int32_t fz2_raw = ((uint32_t)linebuf[35] << 24) | ((uint32_t)linebuf[36] << 16) | ((uint16_t)linebuf[37] << 8) | linebuf[38];
-                    // if(fz2_raw&0x80000000)fz2_raw=-(static_cast<uint32_t>(~(fz2_raw - 1)));
-                    // calculate Tx raw data.The obtained data needs to be restored using two's complement.
-                    int32_t Tx2_raw = ((uint32_t)linebuf[39] << 24) | ((uint32_t)linebuf[40] << 16) | ((uint16_t)linebuf[41] << 8) | linebuf[42];
-                    // calculate Ty raw data.The obtained data needs to be restored using two's complement.
-                    int32_t Ty2_raw = ((uint32_t)linebuf[43] << 24) | ((uint32_t)linebuf[44] << 16) | ((uint16_t)linebuf[45] << 8) | linebuf[46];
-                    // calculate Tz raw data.The obtained data needs to be restored using two's complement.
-                    int32_t Tz2_raw = ((uint32_t)linebuf[47] << 24) | ((uint32_t)linebuf[48] << 16) | ((uint16_t)linebuf[49] << 8) | linebuf[50];
+                    
                     //赋值
                     float fx = (float)(fx_raw*0.001);
                     float fy = (float)(fy_raw*0.001);
@@ -179,12 +138,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                     float Tx = (float)(Tx_raw*0.0001);
                     float Ty = (float)(Ty_raw*0.0001);
                     float Tz = (float)(Tz_raw*0.0001);
-                    float fx2 = (float)(fx2_raw*0.001);
-                    float fy2 = (float)(fy2_raw*0.001);
-                    float fz2 = (float)(fz2_raw*0.001);
-                    float Tx2 = (float)(Tx2_raw*0.0001);
-                    float Ty2 = (float)(Ty2_raw*0.0001);
-                    float Tz2 = (float)(Tz2_raw*0.0001);
 
                     if (fx > FORCETORQUE_FORCE_MAX_N || fy > FORCETORQUE_FORCE_MAX_N || fz > FORCETORQUE_FORCE_MAX_N || Tx > FORCETORQUE_TORQUE_MAX_NM || Ty > FORCETORQUE_TORQUE_MAX_NM || Tz > FORCETORQUE_TORQUE_MAX_NM) {
                         // this reading is out of positive range
@@ -201,18 +154,30 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                         sum_Tx_Nm += Tx;
                         sum_Ty_Nm += Ty;
                         sum_Tz_Nm += Tz;
-                        sum_fx2_N += fx2;
-                        sum_fy2_N += fy2;
-                        sum_fz2_N += fz2;
-                        sum_Tx2_Nm += Tx2;
-                        sum_Ty2_Nm += Ty2;
-                        sum_Tz2_Nm += Tz2;
                         count++;
                     }
-                }                
+                } 
 
+                uart->write(sendzerobuf,sizeof(sendzerobuf)); 
                 // clear buffer
                 linebuf_len = 0;
+            }
+        }
+        else {
+            linebuf[linebuf_len++] = c;
+            if(linebuf_len == 8){
+                for (uint8_t i = 2; i < 8;i++){
+                    if (linebuf[i]!= zerocheckbuf[i]){
+                        linebuf_len = 0;
+                        resolve_mode = 0;
+                        return false;
+                    }
+                }
+                linebuf_len = 0;
+                zero_flag = 1;
+                resolve_mode = 0;
+                uart->write(ask_dr304, sizeof(ask_dr304));
+                return true;
             }
         }
     }
@@ -224,12 +189,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
         reading_torque_Nm.x = sum_Tx_Nm / count;
         reading_torque_Nm.y = sum_Ty_Nm / count;
         reading_torque_Nm.z = sum_Tz_Nm / count;
-        reading_force_N2.x = sum_fx2_N / count;
-        reading_force_N2.y = sum_fy2_N / count;
-        reading_force_N2.z = sum_fz2_N / count;
-        reading_torque_Nm2.x = sum_Tx2_Nm / count;
-        reading_torque_Nm2.y = sum_Ty2_Nm / count;
-        reading_torque_Nm2.z = sum_Tz2_Nm / count;
         //hal.console->printf("ForceTorque calc right fx:%f,fy:%f,fz:%f,tx:%f,ty:%f,tz:%f",
         //reading_force_N.x,reading_force_N.y,reading_force_N.z,reading_torque_Nm.x,reading_torque_Nm.y,reading_torque_Nm.z);
         return true;
@@ -243,12 +202,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
         reading_torque_Nm.x = FORCETORQUE_TORQUE_MAX_NM;
         reading_torque_Nm.y = FORCETORQUE_TORQUE_MAX_NM;
         reading_torque_Nm.z = FORCETORQUE_TORQUE_MAX_NM;
-        reading_force_N2.x = FORCETORQUE_FORCE_MAX_N;
-        reading_force_N2.y = FORCETORQUE_FORCE_MAX_N;
-        reading_force_N2.z = FORCETORQUE_FORCE_MAX_N;
-        reading_torque_Nm2.x = FORCETORQUE_TORQUE_MAX_NM;
-        reading_torque_Nm2.y = FORCETORQUE_TORQUE_MAX_NM;
-        reading_torque_Nm2.z = FORCETORQUE_TORQUE_MAX_NM;
         hal.console->printf("ForceTorque calc high");
         return true;
     }
@@ -261,12 +214,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
         reading_torque_Nm.x = -FORCETORQUE_TORQUE_MAX_NM;
         reading_torque_Nm.y = -FORCETORQUE_TORQUE_MAX_NM;
         reading_torque_Nm.z = -FORCETORQUE_TORQUE_MAX_NM;
-        reading_force_N2.x = -FORCETORQUE_FORCE_MAX_N;
-        reading_force_N2.y = -FORCETORQUE_FORCE_MAX_N;
-        reading_force_N2.z = -FORCETORQUE_FORCE_MAX_N;
-        reading_torque_Nm2.x = -FORCETORQUE_TORQUE_MAX_NM;
-        reading_torque_Nm2.y = -FORCETORQUE_TORQUE_MAX_NM;
-        reading_torque_Nm2.z = -FORCETORQUE_TORQUE_MAX_NM;
         hal.console->printf("ForceTorque calc low");
         return true;
     }

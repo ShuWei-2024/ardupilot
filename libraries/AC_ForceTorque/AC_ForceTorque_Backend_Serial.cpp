@@ -47,11 +47,33 @@ bool AC_ForceTorque_Backend_Serial::detect(uint8_t serial_instance)
 */
 void AC_ForceTorque_Backend_Serial::update(void)
 {
-    if (get_reading(state.force_N, state.torque_Nm,state.force_N2, state.torque_Nm2)) {
-        // update range_valid state based on distance measured
-        state.last_reading_ms = AP_HAL::millis();
-        update_status();
-    } else if (AP_HAL::millis() - state.last_reading_ms > read_timeout_ms()) {
-        set_status(ForceTorque::Status::NoData);
+    if( FORCETORQUE_MAX_INSTANCES == 1){
+        if (get_reading(state.force_N, state.torque_Nm, state.force_N2, state.torque_Nm2))
+        {
+            state.last_reading_ms = AP_HAL::millis();
+            update_status();
+        }
+        else if (AP_HAL::millis() - state.last_reading_ms > read_timeout_ms())
+        {
+            set_status(ForceTorque::Status::NoData);
+        }
+    }else if( FORCETORQUE_MAX_INSTANCES == 2){
+        if (get_reading(state.force_N, state.torque_Nm)) {
+            // update range_valid state based on distance measured
+            state.last_reading_ms = AP_HAL::millis();
+            update_status();
+        } else if (AP_HAL::millis() - state.last_reading_ms > read_timeout_ms()) {
+            set_status(ForceTorque::Status::NoData);
+        }
     }
+}
+
+bool AC_ForceTorque_Backend_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm)
+{
+    //has been override 
+    return false;
+}
+bool AC_ForceTorque_Backend_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm, Vector3f &reading_force_N2, Vector3f &reading_torque_Nm2)
+{
+    return false;
 }

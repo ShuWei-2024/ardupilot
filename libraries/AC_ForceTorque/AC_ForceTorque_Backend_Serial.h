@@ -28,8 +28,10 @@ protected:
     virtual void update(void) override;
 
     // it is essential that anyone relying on the base-class update to
-    // implement this:
-    virtual bool get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm,Vector3f &reading_force_N2, Vector3f &reading_torque_Nm2) = 0;
+    // implement this
+    //TODO:改为纯虚函数重载
+    virtual bool get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm) ;
+    virtual bool get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm, Vector3f &reading_force_N2, Vector3f &reading_torque_Nm2);
 
     // maximum time between readings before we change state to NoData:
     virtual uint16_t read_timeout_ms() const { return 200; }

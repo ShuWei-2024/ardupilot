@@ -94,13 +94,13 @@ void ForceTorque::update(void)
             drivers[i]->update();
         }
     }
-
-    if ((Type)params[0].type.get() == Type::Two_DR304_Serial || (Type)params[0].type.get() == Type::SIM) {
+    //二合一用
+    /*if ((Type)params[0].type.get() == Type::Two_DR304_Serial || (Type)params[0].type.get() == Type::SIM) {
         for(uint8_t i=1; i<FORCETORQUE_MAX_INSTANCES; i++)
         {
             state[i] = state[0];
         }
-    }
+    }*/
 
 #if HAL_LOGGING_ENABLED
     Log_FRTQ();
@@ -300,7 +300,7 @@ void ForceTorque::Log_FRTQ() const
     // if (!logger.should_log(_log_icli_bit)) {
     //     return;
     // }
-    //循环遍历每一个串口,并将信息打印出来
+    //循环遍历每一个实例,并将信息打印出来
     for (uint8_t i=0; i<FORCETORQUE_MAX_INSTANCES; i++) {
         const AC_ForceTorque_Backend *s = get_backend(i);
         if (s == nullptr) {
