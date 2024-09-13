@@ -59,14 +59,14 @@ void ForceTorque::init(InstallLocation location_default)
     }
     init_done = true;
 
-    // set orientation defaults
-    for (uint8_t i=0; i<FORCETORQUE_MAX_INSTANCES; i++) {
-        params[i].location.set_default(location_default);
-    }
-
     for (uint8_t i=0, serial_instance = 0; i<FORCETORQUE_MAX_INSTANCES; i++) {
         // serial_instance will be increased inside detect_instance
         // if a serial driver is loaded for this instance
+        if ( i == 0 )
+            params[i].location.set_default(Up_Rotor);
+        else
+            params[i].location.set_default(Down_Rotor);
+
         WITH_SEMAPHORE(detect_sem);
         detect_instance(i, serial_instance);
         
@@ -306,17 +306,16 @@ void ForceTorque::Log_FRTQ() const
         if (s == nullptr) {
             continue;
         }
-        InstallLocation loc=InstallLocation (s->location()+InstallLocation::Up_Rotor);
         const struct log_FRTQ pkt = {
-                LOG_PACKET_HEADER_INIT(LOG_FRTQ_MSG),
+            LOG_PACKET_HEADER_INIT(LOG_FRTQ_MSG),
                 time_us         : AP_HAL::micros64(),
                 instance        : i,
-                force_x_N       : s->get_force_x_N(loc),
-                force_y_N       : s->get_force_y_N(loc),
-                force_z_N       : s->get_force_z_N(loc),
-                torque_x_N      : s->get_torque_x_Nm(loc),
-                torque_y_N      : s->get_torque_y_Nm(loc),
-                torque_z_N      : s->get_torque_z_Nm(loc),
+                force_x_N       : s->get_force_x_N(),
+                force_y_N       : s->get_force_y_N(),
+                force_z_N       : s->get_force_z_N(),
+                torque_x_N      : s->get_torque_x_Nm(),
+                torque_y_N      : s->get_torque_y_Nm(),
+                torque_z_N      : s->get_torque_z_Nm(),
                 status          : (uint8_t)s->status(),
                 location        : s->location(),
         };

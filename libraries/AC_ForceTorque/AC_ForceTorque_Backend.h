@@ -21,7 +21,33 @@ public:
     enum InstallLocation location() const { return (InstallLocation)params.location.get(); }
 
 
-    float get_force_x_N(enum InstallLocation loc) const {
+    float get_force_x_N() const {
+        return state.force_N.x;
+    }
+    float get_force_y_N() const
+    {
+        return state.force_N.y;
+    }
+    float get_force_z_N() const
+    {
+        return state.force_N.z;
+    }
+    
+    float get_torque_x_Nm() const
+    {
+            return state.torque_Nm.x;
+    }
+    float get_torque_y_Nm() const
+    {
+        return state.torque_Nm.y;
+    }
+    float get_torque_z_Nm() const
+    {
+        return state.torque_Nm.z;
+    }
+
+    float get_force_x_N(enum InstallLocation loc) const
+    {
         switch (loc)
         {
         case InstallLocation::Up_Rotor:
@@ -31,13 +57,12 @@ public:
         case InstallLocation::Down_Rotor:
             /* second sensor */
             return state.force_N2.x;
-        break;
+            break;
         default:
             return state.force_N.x;
             break;
         }
     }
-
     float get_force_y_N(enum InstallLocation loc) const
      { 
         switch (loc)

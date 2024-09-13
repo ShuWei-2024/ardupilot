@@ -99,7 +99,7 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                 linebuf_len = 0;
             }
         } 
-        else if (resolve_mode == 0 && zero_flag == 1)
+        else if (resolve_mode == 0)
         {
             // hal.console->printf("begin cal f and t \n");
              // add character to buffer
@@ -156,9 +156,8 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                         sum_Tz_Nm += Tz;
                         count++;
                     }
-                } 
-
-                uart->write(sendzerobuf,sizeof(sendzerobuf)); 
+                }
+                uart->write(ask_dr304, sizeof(ask_dr304));
                 // clear buffer
                 linebuf_len = 0;
             }
@@ -170,11 +169,11 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                     if (linebuf[i]!= zerocheckbuf[i]){
                         linebuf_len = 0;
                         resolve_mode = 0;
+                        uart->write(sendzerobuf, sizeof(sendzerobuf));
                         return false;
                     }
                 }
                 linebuf_len = 0;
-                zero_flag = 1;
                 resolve_mode = 0;
                 uart->write(ask_dr304, sizeof(ask_dr304));
                 return true;
@@ -233,4 +232,5 @@ void AC_ForceTorque_2DR304_Serial::init_serial(uint8_t serial_instance)
     if (uart != nullptr) {
         uart->begin(initial_baudrate(serial_instance), rx_bufsize(), tx_bufsize());
     }
+    uart->write(sendzerobuf, sizeof(sendzerobuf));
 }
