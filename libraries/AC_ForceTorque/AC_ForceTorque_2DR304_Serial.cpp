@@ -91,10 +91,11 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
             // if not clear the buffer
             if (c == DR304_FRAME_HEADER2) {
                 linebuf[linebuf_len++] = c;
-                //hal.console->printf("0x03 well \n");
+                hal.console->printf("have answer\n");   //debug
             } else if (c == 0x10) {
                 linebuf[linebuf_len++] = c;
                 resolve_mode = 1;
+                hal.console->printf("clear answer\n");  //debug
             }else {
                 linebuf_len = 0;
             }

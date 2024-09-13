@@ -93,6 +93,7 @@ void ForceTorque::update(void)
            
             drivers[i]->update();
         }
+        hal.console->printf("f_z_%d:%.6f\n", i, drivers[i]->get_force_z_N());
     }
     //二合一用
     /*if ((Type)params[0].type.get() == Type::Two_DR304_Serial || (Type)params[0].type.get() == Type::SIM) {

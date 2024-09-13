@@ -1580,7 +1580,7 @@ MAV_LANDED_STATE GCS_MAVLINK_Copter::landed_state() const
 
 void GCS_MAVLINK_Copter::send_wind() const
 {
-    Vector3f airspeed_vec_bf;
+    /*Vector3f airspeed_vec_bf;
     if (!AP::ahrs().airspeed_vector_true(airspeed_vec_bf)) {
         // if we don't have an airspeed estimate then we don't have a
         // valid wind estimate on copters
@@ -1591,7 +1591,19 @@ void GCS_MAVLINK_Copter::send_wind() const
         chan,
         degrees(atan2f(-wind.y, -wind.x)),
         wind.length(),
-        wind.z);
+        wind.z);*/
+    ForceTorque *forceTorque = AP::forcetorque();
+    if (forceTorque == nullptr)
+    {
+        return;
+    }
+    Vector3f force_up = forceTorque->force_N_location(Up_Rotor);
+    Vector3f force_down = forceTorque->force_N_location(Down_Rotor);
+    mavlink_msg_wind_send(
+        chan,
+        force_up[2],
+        force_down[2],
+        force_up[0]);
 }
 
 void GCS_MAVLINK_Copter::send_forcetorque() const
@@ -1602,7 +1614,7 @@ void GCS_MAVLINK_Copter::send_forcetorque() const
         return;
     }
     Vector3f force_up = forceTorque->force_N_location(Up_Rotor);
-    Vector3f force_down = forceTorque->torque_Nm_location(Down_Rotor);
+    Vector3f force_down = forceTorque->force_N_location(Down_Rotor);
     mavlink_msg_forcetorque_send(
         chan,
         //暂时只发送force
