@@ -212,6 +212,36 @@ AC_ForceTorque_Backend *ForceTorque::find_instance(enum InstallLocation location
     return nullptr;
 }
 
+Vector3f ForceTorque::force_N_location(enum InstallLocation location) const
+{
+    Vector3f data = {0, 0, 0};
+    AC_ForceTorque_Backend *backend = find_instance(location);
+    if (backend == nullptr)
+    {
+        return data;
+    }
+    data[0] = backend->get_force_x_N();
+    data[1] = backend->get_force_y_N();
+    data[2] = backend->get_force_z_N();
+    
+    return data;
+}
+
+Vector3f ForceTorque::torque_Nm_location(enum InstallLocation location) const
+{
+    Vector3f data = {0, 0, 0};
+    AC_ForceTorque_Backend *backend = find_instance(location);
+    if (backend == nullptr)
+    {
+        return data;
+    }
+    data[0] = backend->get_torque_x_Nm();
+    data[1] = backend->get_torque_y_Nm();
+    data[2] = backend->get_torque_z_Nm();
+
+    return data;
+}
+
 float ForceTorque::force_x_N_location(enum InstallLocation location) const
 {
     AC_ForceTorque_Backend *backend = find_instance(location);

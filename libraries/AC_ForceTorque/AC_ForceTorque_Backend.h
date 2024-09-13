@@ -35,7 +35,7 @@ public:
     
     float get_torque_x_Nm() const
     {
-            return state.torque_Nm.x;
+        return state.torque_Nm.x;
     }
     float get_torque_y_Nm() const
     {

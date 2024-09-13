@@ -98,6 +98,8 @@ public:
 
     // methods to return force and torque on a particular installation location from
     // any sensor which can current supply it
+    Vector3f force_N_location(enum InstallLocation location) const;
+    Vector3f torque_Nm_location(enum InstallLocation location) const;
     float force_x_N_location(enum InstallLocation location) const;
     float force_y_N_location(enum InstallLocation location) const;
     float force_z_N_location(enum InstallLocation location) const;
