@@ -89,6 +89,8 @@ private:
 
     void send_wind() const;
 
+    void send_forcetorque() const;
+
 #if HAL_HIGH_LATENCY2_ENABLED
     int16_t high_latency_target_altitude() const override;
     uint8_t high_latency_tgt_heading() const override;
