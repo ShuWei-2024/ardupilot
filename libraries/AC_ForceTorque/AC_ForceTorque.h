@@ -9,7 +9,7 @@
 #ifndef FORCETORQUE_MAX_INSTANCES
 #define FORCETORQUE_MAX_INSTANCES 2
 #endif
-#define AC_FORCETORQUE_ENABLED 1
+
 class AC_ForceTorque_Backend;
 
 class ForceTorque

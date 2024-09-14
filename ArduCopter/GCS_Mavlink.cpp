@@ -357,10 +357,6 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(WIND);
         send_wind();
         break;
-    
-    case MSG_FORCETORQUE:
-        send_forcetorque();
-        break;
 
     case MSG_SERVO_OUT:
     case MSG_AOA_SSA:
@@ -550,9 +546,6 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_WIND,
 #if AP_RANGEFINDER_ENABLED
     MSG_RANGEFINDER,
-#endif
-#if AC_FORCETORQUE_ENABLED
-    MSG_FORCETORQUE,
 #endif
     MSG_DISTANCE_SENSOR,
 #if AP_TERRAIN_AVAILABLE
