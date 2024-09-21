@@ -1615,16 +1615,21 @@ void GCS_MAVLINK_Copter::send_forcetorque() const
     }
     Vector3f force_up = forceTorque->force_N_location(Up_Rotor);
     Vector3f force_down = forceTorque->force_N_location(Down_Rotor);
-    mavlink_msg_forcetorque_send(
+    // mavlink_msg_forcetorque_send(
+    //     chan,
+    //     //暂时只发送force
+    //     force_up[0],
+    //     force_up[1],
+    //     force_up[2],
+    //     force_down[0],
+    //     force_down[1],
+    //     force_down[2]
+    //     );
+    mavlink_msg_wind_send(
         chan,
-        //暂时只发送force
-        force_up[0],
-        force_up[1],
         force_up[2],
-        force_down[0],
-        force_down[1],
-        force_down[2]
-        );
+        force_down[2],
+        force_up[0]);
 }
 
 #if HAL_HIGH_LATENCY2_ENABLED

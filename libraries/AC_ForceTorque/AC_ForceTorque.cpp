@@ -140,11 +140,11 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
         }
         break;
     case Type::Two_DR304_Serial:
-        if (AC_ForceTorque_2DR304_Serial::detect(serial_instance)) {
-            for(uint8_t i=instance; i<FORCETORQUE_MAX_INSTANCES; i++)
-            {
-                _add_backend(new AC_ForceTorque_2DR304_Serial(state[i], params[i]), i, serial_instance++);
-            }
+        if (AC_ForceTorque_2DR304_Serial::detect(serial_instance))
+        {
+            bool i = _add_backend(new AC_ForceTorque_2DR304_Serial(state[instance], params[instance]), instance, serial_instance++);
+            if (i)
+                hal.console->printf("init FRTQ %d\n", instance); // debug
         }
         break;
     case Type::NONE:

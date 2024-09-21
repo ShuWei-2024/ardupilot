@@ -57,6 +57,14 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
     if (uart == nullptr) {
         return false;
     }
+    int16_t nbytes = uart->available();
+    if(nbytes==0){
+        empty_time++;
+        if(empty_time >= 5)
+            uart->write(ask_dr304, sizeof(ask_dr304));
+        empty_time = 0;
+        return false;
+    }
 
     float sum_fx_N = 0;
     float sum_fy_N = 0;
@@ -69,7 +77,7 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
     uint16_t count_out_of_negtive_range = 0;
 
     // read any available lines from the inclination
-    int16_t nbytes = uart->available();
+    
     while (nbytes-- > 0) {
         int16_t r = uart->read();
         if (r < 0) {
@@ -222,7 +230,6 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
     return false;
 }
 // if we set the serialx_protocol=50, serialx_BAUD=115 and incli_type=Type::Two_Serial_Serial,
-// then we use only one uart for 2 backend drivers update.
 void AC_ForceTorque_2DR304_Serial::init_serial(uint8_t serial_instance)
 {
     if (serial_instance > 0) {
