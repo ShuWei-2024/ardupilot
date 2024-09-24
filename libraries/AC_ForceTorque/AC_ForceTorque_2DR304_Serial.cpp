@@ -54,15 +54,18 @@ extern const AP_HAL::HAL& hal;
 // read - return last value measured by sensor
 bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm)
 {
+    
     if (uart == nullptr) {
         return false;
     }
     int16_t nbytes = uart->available();
     if(nbytes==0){
         empty_time++;
-        if(empty_time >= 5)
+        if(empty_time >= 15)
             uart->write(ask_dr304, sizeof(ask_dr304));
         empty_time = 0;
+        resolve_mode = 0;
+        linebuf_len = 0;
         return false;
     }
 
@@ -84,14 +87,13 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
             continue;
         }
         //hal.console->printf("read well\n");
-        //hal.console->printf("%02x ", r);
 
         uint8_t c = (uint8_t)r;
         // if buffer is empty and this byte is 0x01, add to buffer
         if (linebuf_len == 0) {
             if (c == DR304_FRAME_HEADER1) {
                 linebuf[linebuf_len++] = c;
-                // hal.console->printf("0x01 well \n");
+                hal.console->printf("0x01 well \n");  //debug
             }
         } 
         else if (linebuf_len == 1) {
@@ -99,11 +101,11 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
             // if not clear the buffer
             if (c == DR304_FRAME_HEADER2) {
                 linebuf[linebuf_len++] = c;
-                hal.console->printf("have answer\n");   //debug
+                hal.console->printf("have answer 03\n");   //debug
             } else if (c == 0x10) {
                 linebuf[linebuf_len++] = c;
                 resolve_mode = 1;
-                hal.console->printf("clear answer\n");  //debug
+                hal.console->printf("clear answer 10\n");  //debug
             }else {
                 linebuf_len = 0;
             }
@@ -116,13 +118,18 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
             // if buffer now has 18 items try to decode it
             if (linebuf_len == DR304_FRAME_LENGTH) {
                 // calculate checksum
-               // hal.console->printf("linebuf_len == DR304_FRAME_LENGTH!\n"); 
-                // hal.console->printf("linebuf = "); 
-                // for(int j = 0; j<linebuf_len; j++)
-                //     hal.console->printf("%x ", linebuf[j]); 
-                // hal.console->printf("\n");     
+                hal.console->printf("linebuf_len == DR304_FRAME_LENGTH!\n"); 
+                hal.console->printf("linebuf = "); 
+                for(int j = 0; j<linebuf_len; j++)
+                    hal.console->printf("%02x ", linebuf[j]); //debug
+                hal.console->printf("\n");     
                 uint16_t crc = (linebuf[DR304_FRAME_LENGTH-2]<<8) | linebuf[DR304_FRAME_LENGTH-1];
-                if (crc == calc_crc_modbus(linebuf, DR304_FRAME_LENGTH-2)) {
+                int checkCRC = calc_crc_modbus(linebuf, DR304_FRAME_LENGTH - 2);
+                hal.console->printf("%x ", crc);              // debug
+                hal.console->printf("%02x ", checkCRC << 8);
+                hal.console->printf("%02x ", checkCRC & 0xff);
+                if (crc == calc_crc_modbus(linebuf, DR304_FRAME_LENGTH - 2))
+                {
                     //输出已经收到一帧数据 
                     //hal.console->printf("ForceTorque have resieved data!"); 
                     // calculate Fx raw data.The obtained data needs to be restored using two's complement.
@@ -147,6 +154,8 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                     float Tx = (float)(Tx_raw*0.0001);
                     float Ty = (float)(Ty_raw*0.0001);
                     float Tz = (float)(Tz_raw*0.0001);
+
+                    hal.console->printf("once_fz:%f\n", fz); // debug
 
                     if (fx > FORCETORQUE_FORCE_MAX_N || fy > FORCETORQUE_FORCE_MAX_N || fz > FORCETORQUE_FORCE_MAX_N || Tx > FORCETORQUE_TORQUE_MAX_NM || Ty > FORCETORQUE_TORQUE_MAX_NM || Tz > FORCETORQUE_TORQUE_MAX_NM) {
                         // this reading is out of positive range

@@ -70,7 +70,8 @@ void AC_ForceTorque_Backend_Serial::update(void)
 
 bool AC_ForceTorque_Backend_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm)
 {
-    //has been override 
+    //has been override
+    hal.console->printf("AC_ForceTorque_Backend_Serial::get_reading() has not been override");  //debug
     return false;
 }
 bool AC_ForceTorque_Backend_Serial::get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm, Vector3f &reading_force_N2, Vector3f &reading_torque_Nm2)

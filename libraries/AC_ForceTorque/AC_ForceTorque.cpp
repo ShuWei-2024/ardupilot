@@ -93,7 +93,7 @@ void ForceTorque::update(void)
            
             drivers[i]->update();
         }
-        hal.console->printf("f_z_%d:%.6f\n", i, drivers[i]->get_force_z_N());
+        // hal.console->printf("f_z_%d:%.6f\n", i, drivers[i]->get_force_z_N());  //debug
     }
     //二合一用
     /*if ((Type)params[0].type.get() == Type::Two_DR304_Serial || (Type)params[0].type.get() == Type::SIM) {
@@ -144,7 +144,7 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
         {
             bool i = _add_backend(new AC_ForceTorque_2DR304_Serial(state[instance], params[instance]), instance, serial_instance++);
             if (i)
-                hal.console->printf("init FRTQ %d\n", instance); // debug
+                hal.console->printf("init FRTQ %d,%d\n", instance, serial_instance); // debug
         }
         break;
     case Type::NONE:
@@ -156,7 +156,7 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
     if (drivers[instance] && state[instance].var_info) {
         backend_var_info[instance] = state[instance].var_info;
         AP_Param::load_object_from_eeprom(drivers[instance], backend_var_info[instance]);
-
+        hal.console->printf("load from eeprom");
         // param count could have changed
         AP_Param::invalidate_count();
     }
