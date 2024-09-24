@@ -249,6 +249,7 @@ void AC_ForceTorque_2DR304_Serial::init_serial(uint8_t serial_instance)
     uart = AP::serialmanager().find_serial(AP_SerialManager::SerialProtocol_ForceTorque, serial_instance);
     if (uart != nullptr) {
         uart->begin(initial_baudrate(serial_instance), rx_bufsize(), tx_bufsize());
+        hal.console->printf("ForceTorque: using serial port %d\n", serial_instance);    //debug
     }
     uart->write(sendzerobuf, sizeof(sendzerobuf));
 }

@@ -120,9 +120,10 @@ bool ForceTorque::_add_backend(AC_ForceTorque_Backend *backend, uint8_t instance
         // we've allocated the same instance twice
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
-    backend->init_serial(serial_instance);
+    backend->init_serial(serial_instance); //TODO:只配了一次串口，检查serial_instance
     drivers[instance] = backend;
     num_instances = MAX(num_instances, instance+1);
+    hal.console->printf("num_instance:%d\n", num_instances);    //debug
     return true;
 }
 
@@ -132,6 +133,7 @@ bool ForceTorque::_add_backend(AC_ForceTorque_Backend *backend, uint8_t instance
 void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
 {
     const Type _type = (Type)params[instance].type.get();
+    hal.console->printf("detect FRTQ type%d\n", (int)_type);    //debug
     switch (_type) {
 
     case Type::DR304_Serial:
@@ -143,8 +145,11 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
         if (AC_ForceTorque_2DR304_Serial::detect(serial_instance))
         {
             bool i = _add_backend(new AC_ForceTorque_2DR304_Serial(state[instance], params[instance]), instance, serial_instance++);
-            if (i)
-                hal.console->printf("init FRTQ %d,%d\n", instance, serial_instance); // debug
+            if (i){
+                hal.console->printf("init FRTQ %d,%d\r", instance, serial_instance); // debug
+                hal.console->printf("&state1:%p\n", &state[instance]);
+            }
+                
         }
         break;
     case Type::NONE:
@@ -156,7 +161,7 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
     if (drivers[instance] && state[instance].var_info) {
         backend_var_info[instance] = state[instance].var_info;
         AP_Param::load_object_from_eeprom(drivers[instance], backend_var_info[instance]);
-        hal.console->printf("load from eeprom");
+        hal.console->printf("load from eeprom");    //debug
         // param count could have changed
         AP_Param::invalidate_count();
     }

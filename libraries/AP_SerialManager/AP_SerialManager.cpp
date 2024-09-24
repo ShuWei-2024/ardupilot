@@ -605,6 +605,8 @@ const AP_SerialManager::UARTState *AP_SerialManager::find_protocol_instance(enum
         if (protocol_match(protocol, (enum SerialProtocol)state[i].protocol.get())) {
             if (found_instance == instance) {
                 return &state[i];
+                hal.console->printf("find_protocol_instance: protocol=%u instance=%u found_instance=%u\n",
+                                protocol, instance, found_instance);    //debug
             }
             found_instance++;
         }
