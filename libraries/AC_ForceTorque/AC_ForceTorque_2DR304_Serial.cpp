@@ -61,11 +61,12 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
     int16_t nbytes = uart->available();
     if(nbytes==0){
         empty_time++;
-        if(empty_time >= 15)
+        if(empty_time >= 15){
             uart->write(ask_dr304, sizeof(ask_dr304));
-        empty_time = 0;
-        resolve_mode = 0;
-        linebuf_len = 0;
+            empty_time = 0;
+            resolve_mode = 0;
+            linebuf_len = 0;
+        }
         return false;
     }
 
@@ -123,11 +124,11 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
                 for(int j = 0; j<linebuf_len; j++)
                     hal.console->printf("%02x ", linebuf[j]); //debug
                 hal.console->printf("\n");     
-                uint16_t crc = (linebuf[DR304_FRAME_LENGTH-2]<<8) | linebuf[DR304_FRAME_LENGTH-1];
+                uint16_t crc = (linebuf[DR304_FRAME_LENGTH-1]<<8) | linebuf[DR304_FRAME_LENGTH-2];
                 int checkCRC = calc_crc_modbus(linebuf, DR304_FRAME_LENGTH - 2);
-                hal.console->printf("%x ", crc);              // debug
-                hal.console->printf("%02x ", checkCRC << 8);
-                hal.console->printf("%02x ", checkCRC & 0xff);
+                hal.console->printf("received_crc%x \n", crc);              // debug
+                hal.console->printf("%x ", checkCRC);
+                // hal.console->printf("%02x ", checkCRC & 0xff);
                 if (crc == calc_crc_modbus(linebuf, DR304_FRAME_LENGTH - 2))
                 {
                     //输出已经收到一帧数据 
