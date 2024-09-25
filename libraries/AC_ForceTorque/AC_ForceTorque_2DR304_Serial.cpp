@@ -242,14 +242,15 @@ bool AC_ForceTorque_2DR304_Serial::get_reading(Vector3f &reading_force_N, Vector
 // if we set the serialx_protocol=50, serialx_BAUD=115 and incli_type=Type::Two_Serial_Serial,
 void AC_ForceTorque_2DR304_Serial::init_serial(uint8_t serial_instance)
 {
-    if (serial_instance > 0) {
-        return;
-    }
+    // if (serial_instance > 0) {
+    //     return;
+    // }
 
     uart = AP::serialmanager().find_serial(AP_SerialManager::SerialProtocol_ForceTorque, serial_instance);
     if (uart != nullptr) {
         uart->begin(initial_baudrate(serial_instance), rx_bufsize(), tx_bufsize());
-        hal.console->printf("ForceTorque: using serial port %d\n", serial_instance);    //debug
-    }
+        hal.console->printf("ForceTorque: using serial port %d,addr:%p\n", serial_instance,&uart);    //debug
+    }else
+        hal.console->printf("uart init failed\n");  //debug
     uart->write(sendzerobuf, sizeof(sendzerobuf));
 }
