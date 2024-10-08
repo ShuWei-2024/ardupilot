@@ -147,7 +147,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     FAST_TASK(Log_Video_Stabilisation),
 #endif
 
-    SCHED_TASK(rc_loop,              250,    130,  3),
+    SCHED_TASK(rc_loop,              400,    130,  3),
     SCHED_TASK(throttle_loop,         50,     75,  6),
 #if AP_FENCE_ENABLED
     SCHED_TASK(fence_check,           25,    100,  7),
@@ -168,7 +168,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(read_rangefinder,      20,    100,  33),
 #endif
 #if FORCETORQUE_ENABLED == ENABLED
-    SCHED_TASK(read_forcetorque,      20,    200,  34),
+    SCHED_TASK(read_forcetorque,      50,    150,  34),
 #endif
 #if HAL_PROXIMITY_ENABLED
     SCHED_TASK_CLASS(AP_Proximity,         &copter.g2.proximity,        update,         200,  50,  36),
@@ -228,7 +228,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK_CLASS(AP_Scheduler,         &copter.scheduler,           update_logging, 0.1,  75, 126),
 #endif
 #if AP_RPM_ENABLED
-    SCHED_TASK_CLASS(AP_RPM,               &copter.rpm_sensor,          update,          40, 200, 129),
+    SCHED_TASK_CLASS(AP_RPM,               &copter.rpm_sensor,          update,          100, 200, 129),
 #endif
 #if AP_TEMPCALIBRATION_ENABLED
     SCHED_TASK_CLASS(AP_TempCalibration,   &copter.g2.temp_calibration, update,          10, 100, 135),
