@@ -82,6 +82,7 @@ public:
     // update state of all ForceTorques. Should be called at around
     // 100Hz from main loop
     void update(void);
+    bool setzero() const;
 
     // return true if we have a ForceTorque with the specified install location
     bool has_location(enum InstallLocation location) const;

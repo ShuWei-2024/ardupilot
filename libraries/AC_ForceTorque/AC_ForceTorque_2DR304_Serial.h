@@ -10,9 +10,9 @@ public:
 
     using AC_ForceTorque_Backend_Serial::AC_ForceTorque_Backend_Serial;
     void init_serial(uint8_t serial_instance) override;
+    bool sendsetzero() const override;
 
 private:
-
     // get a reading
     bool get_reading(Vector3f &reading_force_N, Vector3f &reading_torque_Nm) override;
 

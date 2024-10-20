@@ -780,6 +780,9 @@ bool AP_Arming_Copter::arm(const AP_Arming::Method method, const bool do_arming_
     // assumed armed without a arming, switch. Overridden in switches.cpp
     copter.ap.armed_with_airmode_switch = false;
 
+    // TODO:插入六维力清零指令
+    if(!copter.forcetorque.setzero()) 
+        hal.console->printf("set zero failed");
     // return success
     return true;
 }

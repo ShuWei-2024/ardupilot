@@ -166,3 +166,6 @@ ENV/
 env.bak/
 venv.bak/
 autotest_result_*_junit.xml
+
+###上传固件
+!build/**/*.apj

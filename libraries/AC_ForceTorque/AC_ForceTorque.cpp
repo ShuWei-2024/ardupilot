@@ -135,12 +135,12 @@ void ForceTorque::detect_instance(uint8_t instance, uint8_t& serial_instance)
     const Type _type = (Type)params[instance].type.get();
     hal.console->printf("detect FRTQ type%d\n", (int)_type);    //debug
     switch (_type) {
-
+        //现在type1 2都行了
     case Type::DR304_Serial:
-        if (AC_ForceTorque_DR304_Serial::detect(serial_instance)) {
-            _add_backend(new AC_ForceTorque_DR304_Serial(state[instance], params[instance]), instance, serial_instance++);
-        }
-        break;
+        // if (AC_ForceTorque_DR304_Serial::detect(serial_instance)) {
+        //     _add_backend(new AC_ForceTorque_DR304_Serial(state[instance], params[instance]), instance, serial_instance++);
+        // }
+        // break;
     case Type::Two_DR304_Serial:
         if (AC_ForceTorque_2DR304_Serial::detect(serial_instance))
         {
@@ -388,6 +388,19 @@ bool ForceTorque::prearm_healthy(char *failure_msg, const uint8_t failure_msg_le
     }
 
     return true;
+}
+
+bool ForceTorque::setzero() const
+{
+    bool result = true;
+    for (uint8_t i = 0; i < num_instances; i++)
+    {
+        if (drivers[i] != nullptr)
+        {
+            result &= drivers[i]->sendsetzero();
+        }
+    }
+    return result;
 }
 
 ForceTorque *ForceTorque::_singleton;

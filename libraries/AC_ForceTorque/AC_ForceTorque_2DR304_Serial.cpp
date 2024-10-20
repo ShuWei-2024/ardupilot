@@ -254,3 +254,12 @@ void AC_ForceTorque_2DR304_Serial::init_serial(uint8_t serial_instance)
         hal.console->printf("uart init failed\n");  //debug
     uart->write(sendzerobuf, sizeof(sendzerobuf));
 }
+
+bool AC_ForceTorque_2DR304_Serial::sendsetzero() const
+{
+    if(uart != nullptr){
+        uart->write(sendzerobuf, sizeof(sendzerobuf));
+        return true;
+    }
+    return false;
+}

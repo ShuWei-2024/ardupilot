@@ -17,6 +17,7 @@ public:
     // update the state structure
     virtual void update() = 0;
     virtual void init_serial(uint8_t serial_instance) {};
+    virtual bool sendsetzero() const = 0;
 
     enum InstallLocation location() const { return (InstallLocation)params.location.get(); }
 
