@@ -29,6 +29,7 @@
 *.lst
 *.o
 *.obj
+*.out
 *.px4
 *.pyc
 *.tlog

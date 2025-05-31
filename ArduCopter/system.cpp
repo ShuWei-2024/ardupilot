@@ -159,8 +159,10 @@ void Copter::init_ardupilot()
 #endif
 
     // initialise forceTorque sensors
+#if FORCETORQUE_ENABLED == ENABLED
     forcetorque.set_log_frtq_bit(MASK_LOG_FRTQ);
     forcetorque.init(LOCATION_NONE);
+#endif
 
 #if HAL_PROXIMITY_ENABLED
     // init proximity sensor

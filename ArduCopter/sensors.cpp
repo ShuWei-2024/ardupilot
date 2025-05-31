@@ -176,5 +176,7 @@ bool Copter::get_rangefinder_height_interpolated_cm(int32_t& ret) const
 // read the forceTorque
 void Copter::read_forcetorque(void)
 {
+#if FORCETORQUE_ENABLED == ENABLED
     forcetorque.update();
+#endif
 }
