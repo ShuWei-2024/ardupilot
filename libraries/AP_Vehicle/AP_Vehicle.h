@@ -68,6 +68,8 @@
 #include <Filter/LowPassFilter.h>
 #include <AP_KDECAN/AP_KDECAN.h>
 #include <Filter/AP_Filter.h>
+#include <AP_CompanionComputer/AP_CompanionComputer.h>
+
 
 class AP_DDS_Client;
 
@@ -408,6 +410,8 @@ protected:
 #if AP_TEMPERATURE_SENSOR_ENABLED
     AP_TemperatureSensor temperature_sensor;
 #endif
+
+    AP_CompanionComputer companion_computer;
 
     static const struct AP_Param::GroupInfo var_info[];
     static const struct AP_Scheduler::Task scheduler_tasks[];

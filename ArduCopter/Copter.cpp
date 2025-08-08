@@ -266,6 +266,10 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if STATS_ENABLED == ENABLED
     SCHED_TASK_CLASS(AP_Stats,             &copter.g2.stats,            update,           1, 100, 171),
 #endif
+    // communicate with companion computer
+    //FAST_TASK(receive_companion_computer),    
+    SCHED_TASK(receive_companion_computer,  50,    200,  172),
+    SCHED_TASK(send2_companion_computer,  10,    50,  173),
 };
 
 void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -275,6 +279,17 @@ void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
     tasks = &scheduler_tasks[0];
     task_count = ARRAY_SIZE(scheduler_tasks);
     log_bit = MASK_LOG_PM;
+}
+
+void Copter::receive_companion_computer()
+{
+    companion_computer.update();   
+}
+
+// SCHED_TASK实现
+void Copter::send2_companion_computer()
+{
+    companion_computer.send_data();
 }
 
 constexpr int8_t Copter::_failsafe_priorities[7];
