@@ -81,6 +81,8 @@
 #endif
 
 #include <AP_IBus_Telem/AP_IBus_Telem.h>
+#include <AP_CompanionComputer/AP_CompanionComputer.h>
+
 
 class AP_DDS_Client;
 
@@ -475,6 +477,7 @@ protected:
 #if AP_SCRIPTING_ENABLED
     AP_Scripting scripting;
 #endif
+    AP_CompanionComputer companion_computer;
 
     static const struct AP_Param::GroupInfo var_info[];
 #if AP_SCHEDULER_ENABLED
