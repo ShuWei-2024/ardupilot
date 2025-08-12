@@ -35,7 +35,7 @@ public:
     const CompanionReceivePacket& get_received_packet() const { return _received_packet; }
 
 private:
-
+    #define PACKET_TIMEOUT_MS 200
     AP_Int8 _enable;          
     AP_Int8 _port_index;        // the index of instance for companion computer, first companion computer serial is 0:Serial0
 
@@ -50,6 +50,7 @@ private:
     CompanionReceivePacket _received_packet;
     uint8_t _rx_buffer[sizeof(CompanionReceivePacket)];
     uint8_t _rx_count;
+    uint32_t _rx_start_time;
     uint32_t _last_received_ms;
 
     // send counter
@@ -62,4 +63,6 @@ private:
     
     // receive validate
     bool validate_packet(const CompanionReceivePacket& pkt) const;
+
+    int print_count = 0;
 };
