@@ -15,7 +15,7 @@ const AP_Param::GroupInfo AP_CompanionComputer::var_info[] = {
 
     // @Param: PORT
     // @DisplayName: instance of companion computer Serial Port
-    // @Description: the index of instance for companion computer, first companion computer serial is 0:Serial0
+    // @Description: The nth serial port instance found starting from serial0 that uses serial protocol 49
     // @Values: 0:instance0, 1:instance1
     // @User: Advanced
     AP_GROUPINFO("PORT", 2, AP_CompanionComputer, _port_index, 0),
@@ -23,52 +23,55 @@ const AP_Param::GroupInfo AP_CompanionComputer::var_info[] = {
     AP_GROUPEND
 };
 
-AP_CompanionComputer::AP_CompanionComputer() {
+AP_CompanionComputer::AP_CompanionComputer() 
+{
     AP_Param::setup_object_defaults(this, var_info);
     _rx_state = WAITING_HEADER1;
     _rx_count = 0;
     _uart = nullptr;
 }
 
-void AP_CompanionComputer::init() {
+void AP_CompanionComputer::init() 
+{
     if (!_enable) {
         return;
     }
-    // _uart->begin(115200, 512, 128);
-    hal.console->printf("---------123456789 companion computer init-------:\t\r\n");
-    // get serial uart: SSerialProtocol_CompanionComputer 
     _uart = AP::serialmanager().find_serial(AP_SerialManager::SerialProtocol_2CC, 0);
+    // hal.console->printf("---------companion computer find serial-------:\n");  //debug-print
     
     if (_uart != nullptr) {
         _uart->begin(115200, 512, 128);
-        hal.console->printf("---------10000009 companion computer init-------:\t\r\n");
+        // hal.console->printf("---------companion uart begin-------:\n");  //debug-print
     }    
 }
 
-void AP_CompanionComputer::update() { 
-    if (!_enable) return;
-    
-    if (_uart == nullptr) return;
+void AP_CompanionComputer::update()
+{
+    if (!_enable || _uart == nullptr)
+        return;
 
     int16_t nbytes = _uart->available();
     while (nbytes-- > 0) {
         uint8_t byte = _uart->read();
         process_received_data(byte);
-    }}
+    }
+}
 
-void AP_CompanionComputer::process_received_data(uint8_t byte) {
+void AP_CompanionComputer::process_received_data(uint8_t oneByte) 
+{
     const uint32_t now = AP_HAL::millis();
     
     switch (_rx_state) {
     case WAITING_HEADER1:
-        if (byte == COMPANION_FRAME_HEADER1) {
+        if (oneByte == COMPANION_FRAME_HEADER1) {
             _rx_state = WAITING_HEADER2;
+            _rx_start_time = now;
         }
 
         break;
 
     case WAITING_HEADER2:
-        if (byte == COMPANION_FRAME_HEADER2) {
+        if (oneByte == COMPANION_FRAME_HEADER2) {
             _rx_buffer[0] = COMPANION_FRAME_HEADER1;
             _rx_buffer[1] = COMPANION_FRAME_HEADER2;
             _rx_count = 2;
@@ -80,13 +83,20 @@ void AP_CompanionComputer::process_received_data(uint8_t byte) {
         break;
 
     case RECEIVING_DATA:
-        _rx_buffer[_rx_count++] = byte;
+        if (now - _rx_start_time > PACKET_TIMEOUT_MS){
+            _rx_state = WAITING_HEADER1;
+            _rx_count = 0;
+            break;
+        }
+
+        _rx_buffer[_rx_count++] = oneByte;
         if (_rx_count >= sizeof(_rx_buffer)) {
             // 完整数据包接收
             memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
             
             if (validate_packet(_received_packet)) {
-                _last_received_ms = now;
+                _last_received_ms = now;//TODO:好像多余
+                /*
                 // --------------receive package------------------
                 //uint8_t ctrl_mode = _rx_buffer[5];
 
@@ -108,17 +118,20 @@ void AP_CompanionComputer::process_received_data(uint8_t byte) {
                 // //calculate target quad-rotor velocity 
                 // int16_t target_vel = ((uint16_t)_rx_buffer[29] << 8) | _rx_buffer[28];
                 
-                // hal.console->printf("666 companion computer uart: %u\t,%u\t,%u\t, %ld\t,%ld\t,  %d\t,%d\t,%d\r\n",  
-                //     _received_packet.x_axis_err, 
-                //     _received_packet.y_axis_err,
-                //     _received_packet.z_axis_err,
-                //     _received_packet.target_lon,
-                //     _received_packet.target_lat, 
-                //     _received_packet.target_alt,
-                //     _received_packet.target_yaw,
-                //     _received_packet.target_velocity);
-
-            }
+                */
+                if(print_count++ > 10){
+                    print_count = 0;
+                    hal.console->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
+                                        _received_packet.x_axis_err,
+                                        _received_packet.y_axis_err,
+                                        _received_packet.z_axis_err,
+                                        _received_packet.target_lon,
+                                        _received_packet.target_lat,
+                                        _received_packet.target_alt,
+                                        _received_packet.target_yaw,
+                                        _received_packet.target_velocity);
+                }
+            }//TODO:错误处理，从bak里拿回上一帧数据
             
             _rx_state = WAITING_HEADER1;
         }
@@ -126,7 +139,8 @@ void AP_CompanionComputer::process_received_data(uint8_t byte) {
     }
 }
 
-void AP_CompanionComputer::send_data() {
+void AP_CompanionComputer::send_data() 
+{
     if (!_enable || _uart == nullptr) {
         return;
     }
@@ -152,7 +166,9 @@ void AP_CompanionComputer::send_data() {
     if (battery.has_cell_voltages(1)) {            
         if (AP::battery().capacity_remaining_pct(percentage, 1)){
             pkt.battery_percent = percentage;
-        }        
+        }else{
+            pkt.battery_percent = 0;
+        }
     } else {
         pkt.battery_percent = 0;
     }
@@ -187,7 +203,8 @@ void AP_CompanionComputer::send_data() {
     _last_sent_ms = now;
 }
 
-uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t len) const {
+uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t len) const 
+{
     uint8_t sum = 0;
     for (uint8_t i = 0; i < len; i++) {
         sum += data[i];
@@ -195,7 +212,8 @@ uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t le
     return sum & 0xFF;
 }
 
-bool AP_CompanionComputer::validate_packet(const CompanionReceivePacket& pkt) const {
+bool AP_CompanionComputer::validate_packet(const CompanionReceivePacket& pkt) const 
+{
     // 验证头尾
     if (pkt.header1 != COMPANION_FRAME_HEADER1 ||
         pkt.header2 != COMPANION_FRAME_HEADER2 ||
