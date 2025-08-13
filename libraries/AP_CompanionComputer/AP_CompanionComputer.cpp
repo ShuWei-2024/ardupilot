@@ -92,47 +92,28 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
         _rx_buffer[_rx_count++] = oneByte;
         if (_rx_count >= sizeof(_rx_buffer)) {
             // 完整数据包接收
-            memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
-            
-            if (validate_packet(_received_packet)) {
-                _last_received_ms = now;//TODO:好像多余
-                /*
-                // --------------receive package------------------
-                //uint8_t ctrl_mode = _rx_buffer[5];
-
-                // //calculate image X axis error
-                // int16_t imageX_err = ((uint16_t)_rx_buffer[7] << 8) | _rx_buffer[6];
-                // //calculate image Y axis error
-                // int16_t imageY_err = ((uint16_t)_rx_buffer[9] << 8) | _rx_buffer[8];
-                // //calculate image Z axis error
-                // int16_t imageZ_err = ((uint16_t)_rx_buffer[11] << 8) | _rx_buffer[10];
-
-                // //calculate target quad-rotor longitude 
-                // int32_t target_lon = ((uint32_t)_rx_buffer[19] << 24) | ((uint32_t)_rx_buffer[18] << 16) | ((uint16_t)_rx_buffer[17] << 8) | _rx_buffer[16];
-                // //calculate target quad-rotor latitude 
-                // int32_t target_lat = ((uint32_t)_rx_buffer[23] << 24) | ((uint32_t)_rx_buffer[22] << 16) | ((uint16_t)_rx_buffer[21] << 8) | _rx_buffer[20];
-                // //calculate target quad-rotor altitude 
-                // int16_t target_alt = ((uint16_t)_rx_buffer[25] << 8) | _rx_buffer[24];
-                // //calculate target quad-rotor heading 
-                // int16_t target_yaw = ((uint16_t)_rx_buffer[27] << 8) | _rx_buffer[26];
-                // //calculate target quad-rotor velocity 
-                // int16_t target_vel = ((uint16_t)_rx_buffer[29] << 8) | _rx_buffer[28];
+            if (validate_packet(_rx_buffer)){
+                memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
+                // hal.console->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
+                //                     _received_packet.x_axis_err,
+                //                     _received_packet.y_axis_err,
+                //                     _received_packet.z_axis_err,
+                //                     _received_packet.target_lon,
+                //                     _received_packet.target_lat,
+                //                     _received_packet.target_alt,
+                //                     _received_packet.target_yaw,
+                //                     _received_packet.target_velocity);   //debug-print
+                // _uart->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
+                //                 _received_packet.x_axis_err,
+                //                 _received_packet.y_axis_err,
+                //                 _received_packet.z_axis_err,
+                //                 _received_packet.target_lon,
+                //                 _received_packet.target_lat,
+                //                 _received_packet.target_alt,
+                //                 _received_packet.target_yaw,
+                //                 _received_packet.target_velocity);
+            }
                 
-                */
-                if(print_count++ > 10){
-                    print_count = 0;
-                    hal.console->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
-                                        _received_packet.x_axis_err,
-                                        _received_packet.y_axis_err,
-                                        _received_packet.z_axis_err,
-                                        _received_packet.target_lon,
-                                        _received_packet.target_lat,
-                                        _received_packet.target_alt,
-                                        _received_packet.target_yaw,
-                                        _received_packet.target_velocity);
-                }
-            }//TODO:错误处理，从bak里拿回上一帧数据
-            
             _rx_state = WAITING_HEADER1;
         }
         break;
@@ -212,16 +193,16 @@ uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t le
     return sum & 0xFF;
 }
 
-bool AP_CompanionComputer::validate_packet(const CompanionReceivePacket& pkt) const 
+bool AP_CompanionComputer::validate_packet(const uint8_t *pkt) const 
 {
     // 验证头尾
-    if (pkt.header1 != COMPANION_FRAME_HEADER1 ||
-        pkt.header2 != COMPANION_FRAME_HEADER2 ||
-        pkt.end_sign != COMPANION_END_SIGN) {
+    if (pkt[0] != COMPANION_FRAME_HEADER1 ||
+        pkt[1] != COMPANION_FRAME_HEADER2 ||
+        pkt[33] != COMPANION_END_SIGN) {
         return false;
     }
     
     // 验证校验和
-    uint8_t calc_checksum = calculate_checksum(reinterpret_cast<const uint8_t*>(&pkt), COMPANION_RECV_TOTAL_LENGTH-2);
-    return (calc_checksum == pkt.checksum);
+    uint8_t calc_checksum = calculate_checksum(pkt, COMPANION_RECV_TOTAL_LENGTH-2);
+    return (calc_checksum == pkt[32]);
 }
