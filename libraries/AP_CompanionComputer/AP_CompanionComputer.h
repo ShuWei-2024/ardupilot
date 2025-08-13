@@ -62,7 +62,7 @@ private:
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
     
     // receive validate
-    bool validate_packet(const CompanionReceivePacket& pkt) const;
+    bool validate_packet(const uint8_t *pkt) const;
 
     int print_count = 0;
 };
