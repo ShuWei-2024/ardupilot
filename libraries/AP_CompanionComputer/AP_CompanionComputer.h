@@ -33,6 +33,7 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
     const CompanionReceivePacket& get_received_packet() const { return _received_packet; }
+    void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
     #define PACKET_TIMEOUT_MS 200
@@ -57,12 +58,11 @@ private:
     uint32_t _last_sent_ms;
 
     AP_HAL::UARTDriver *_uart;
-
     // crc checksum
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
-    
     // receive validate
     bool validate_packet(const uint8_t *pkt) const;
-
     int print_count = 0;
+    uint32_t _log_c2hc_bit = -1;
+    void Log_C2HC() const;
 };
