@@ -675,6 +675,22 @@ struct PACKED log_VER {
     uint8_t build_type;
 };
 
+struct PACKED log_c2hc {
+  LOG_PACKET_HEADER;
+  uint64_t time_us;
+  uint8_t ctrl_mode;
+  int16_t x_axis_err;
+  int16_t y_axis_err;
+  int16_t z_axis_err;
+  float fast_velocity;
+  float desired_yaw;
+  double target_lon;
+  double target_lat;
+  float target_alt;
+  float target_yaw;
+  float target_velocity;
+  float yaw_max_rate;
+};
 
 // FMT messages define all message formats other than FMT
 // UNIT messages define units which can be referenced by FMTU messages
@@ -1211,6 +1227,11 @@ struct PACKED log_VER {
 // @Field: ThrOut: Throttle output
 // @Field: FailFlags: bit 0 motor failed, bit 1 motors balanced, should be 2 in normal flight
 
+// @LoggerMessage: C2HC_MSG
+// @Description: Communicate with the host computer
+// @Field: ctrl_mode: 
+// @Field: 略
+
 // messages for all boards
 #define LOG_COMMON_STRUCTURES \
     { LOG_FORMAT_MSG, sizeof(log_Format), \
@@ -1337,7 +1358,9 @@ LOG_STRUCTURE_FROM_AIS \
     { LOG_VER_MSG, sizeof(log_VER), \
       "VER",   "QBHBBBBIZHB", "TimeUS,BT,BST,Maj,Min,Pat,FWT,GH,FWS,APJ,BU", "s----------", "F----------", false }, \
     { LOG_MOTBATT_MSG, sizeof(log_MotBatt), \
-      "MOTB", "QfffffB",  "TimeUS,LiftMax,BatVolt,ThLimit,ThrAvMx,ThrOut,FailFlags", "s------", "F------" , true }
+      "MOTB", "QfffffB",  "TimeUS,LiftMax,BatVolt,ThLimit,ThrAvMx,ThrOut,FailFlags", "s------", "F------" , true }, \
+    { LOG_C2HC_MSG, sizeof(log_c2hc), \
+      "C2HC", "QBhhhffddffff", "TimeUS,CtrlMode,Xerr,Yerr,Zerr,MaxVel,DesYaw,TarLon,TarLat,TarAlt,TarYaw,TarVel,YawMaxRate", "s----ndDDmdnk","F------------", false}
 
 // message types 0 to 63 reserved for vehicle specific use
 
@@ -1425,6 +1448,7 @@ enum LogMessages : uint8_t {
     LOG_RCOUT2_MSG,
     LOG_RCOUT3_MSG,
     LOG_IDS_FROM_FENCE,
+    LOG_C2HC_MSG,
 
     _LOG_LAST_MSG_
 };

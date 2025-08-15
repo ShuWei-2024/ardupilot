@@ -198,6 +198,9 @@ void Copter::init_ardupilot()
     custom_control.init();
 #endif
 
+    companion_computer.init();
+    companion_computer.set_c2hc_log_bit(MASK_LOG_C2HC_MSG);
+
     // set landed flags
     set_land_complete(true);
     set_land_complete_maybe(true);

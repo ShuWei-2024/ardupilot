@@ -323,7 +323,6 @@ void AP_Vehicle::setup()
 #if HAL_GCS_ENABLED
     gcs().setup_console();
 #endif
-    companion_computer.init();
 
 #if AP_NETWORKING_ENABLED
     networking.init();

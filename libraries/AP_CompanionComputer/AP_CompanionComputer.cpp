@@ -1,6 +1,6 @@
 #include "AP_CompanionComputer.h"
 #include <AP_SerialManager/AP_SerialManager.h>
-
+#include <AP_Logger/AP_Logger.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -94,6 +94,9 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
             // 完整数据包接收
             if (validate_packet(_rx_buffer)){
                 memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
+#if HAL_LOGGING_ENABLED
+                Log_C2HC();
+#endif
                 // hal.console->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
                 //                     _received_packet.x_axis_err,
                 //                     _received_packet.y_axis_err,
@@ -162,7 +165,7 @@ void AP_CompanionComputer::send_data()
         pkt.my_lat = loc.lat;
         pkt.my_alt = loc.alt / 100; // cm转m
     }
-    
+
     // 获取速度
     Vector3f velocity;
     if (ahrs.get_velocity_NED(velocity)) {
@@ -206,3 +209,34 @@ bool AP_CompanionComputer::validate_packet(const uint8_t *pkt) const
     uint8_t calc_checksum = calculate_checksum(pkt, COMPANION_RECV_TOTAL_LENGTH-2);
     return (calc_checksum == pkt[32]);
 }
+
+#if HAL_LOGGING_ENABLED
+void AP_CompanionComputer::Log_C2HC() const
+{
+    // if (_log_c2hc_bit == uint32_t(-1)) {     //需要配合修改地面站
+    //     return;
+    // }
+    // if (!AP::logger().should_log(_log_c2hc_bit))
+    // {
+    //     return;
+    // }
+    const struct log_c2hc pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_C2HC_MSG),
+        time_us : AP_HAL::micros64(),
+        ctrl_mode : _received_packet.ctrl_mode,
+        x_axis_err : _received_packet.x_axis_err,
+        y_axis_err : _received_packet.y_axis_err,
+        z_axis_err : _received_packet.z_axis_err,
+        fast_velocity : float(_received_packet.fast_velocity) / 100.0, // TODO:转换回浮点
+        desired_yaw : float(_received_packet.desired_yaw) / 100.0,
+        target_lon : double(_received_packet.target_lon) / 1e7,
+        target_lat : double(_received_packet.target_lat) / 1e7,
+        target_alt : float(_received_packet.target_alt) / 100.0,
+        target_yaw : float(_received_packet.target_yaw) / 100.0,
+        target_velocity : float(_received_packet.target_velocity) / 100.0,
+        yaw_max_rate : float(_received_packet.yaw_max_rate) / 1000.0,
+    };
+    AP::logger().WriteBlock(&pkt, sizeof(pkt));
+    
+}
+#endif // HAL_LOGGING_ENABLED
