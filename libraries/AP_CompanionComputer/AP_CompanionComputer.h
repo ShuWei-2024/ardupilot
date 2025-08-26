@@ -32,7 +32,8 @@ public:
 
     static const struct AP_Param::GroupInfo var_info[];
 
-    const CompanionReceivePacket& get_received_packet() const { return _received_packet; }
+    const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
+    
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
@@ -49,6 +50,7 @@ private:
 
     // received buff
     CompanionReceivePacket _received_packet;
+    ParsedPacket _parsed_packet;
     uint8_t _rx_buffer[sizeof(CompanionReceivePacket)];
     uint8_t _rx_count;
     uint32_t _rx_start_time;
