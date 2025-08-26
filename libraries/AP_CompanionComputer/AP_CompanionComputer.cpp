@@ -94,6 +94,19 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
             // 完整数据包接收
             if (validate_packet(_rx_buffer)){
                 memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
+                _parsed_packet.ctrl_mode = _received_packet.ctrl_mode;
+                _parsed_packet.x_axis_err = _received_packet.x_axis_err;
+                _parsed_packet.y_axis_err = _received_packet.y_axis_err;
+                _parsed_packet.z_axis_err = _received_packet.z_axis_err;
+                _parsed_packet.max_velocity = float(_received_packet.max_velocity) / 100.0, //转换回浮点
+                _parsed_packet.desired_yaw = float(_received_packet.desired_yaw) / 100.0,
+                _parsed_packet.target_lon = double(_received_packet.target_lon) / 1e7,
+                _parsed_packet.target_lat = double(_received_packet.target_lat) / 1e7,
+                _parsed_packet.target_alt = float(_received_packet.target_alt) / 100.0,
+                _parsed_packet.target_yaw = float(_received_packet.target_yaw) / 100.0,
+                _parsed_packet.target_velocity = float(_received_packet.target_velocity) / 100.0,
+                _parsed_packet.yaw_max_rate = float(_received_packet.yaw_max_rate) / 1000.0,
+
 #if HAL_LOGGING_ENABLED
                 Log_C2HC();
 #endif
@@ -142,7 +155,7 @@ void AP_CompanionComputer::send_data()
     pkt.data_length = sizeof(CompanionSendPacket) - 7; // 2+2+1+2head 2 byte,  commond 2 byte, checksum 2byte, end sign 2 byte
     
     // get flight control mode
-    pkt.ctrl_mode = _received_packet.ctrl_mode;
+    pkt.ctrl_mode = _parsed_packet.ctrl_mode;
 
     //get battery percentage
     const AP_BattMonitor &battery = AP::battery();
@@ -223,18 +236,18 @@ void AP_CompanionComputer::Log_C2HC() const
     const struct log_c2hc pkt = {
         LOG_PACKET_HEADER_INIT(LOG_C2HC_MSG),
         time_us : AP_HAL::micros64(),
-        ctrl_mode : _received_packet.ctrl_mode,
-        x_axis_err : _received_packet.x_axis_err,
-        y_axis_err : _received_packet.y_axis_err,
-        z_axis_err : _received_packet.z_axis_err,
-        fast_velocity : float(_received_packet.fast_velocity) / 100.0, // TODO:转换回浮点
-        desired_yaw : float(_received_packet.desired_yaw) / 100.0,
-        target_lon : double(_received_packet.target_lon) / 1e7,
-        target_lat : double(_received_packet.target_lat) / 1e7,
-        target_alt : float(_received_packet.target_alt) / 100.0,
-        target_yaw : float(_received_packet.target_yaw) / 100.0,
-        target_velocity : float(_received_packet.target_velocity) / 100.0,
-        yaw_max_rate : float(_received_packet.yaw_max_rate) / 1000.0,
+        ctrl_mode : _parsed_packet.ctrl_mode,
+        x_axis_err : _parsed_packet.x_axis_err,
+        y_axis_err : _parsed_packet.y_axis_err,
+        z_axis_err : _parsed_packet.z_axis_err,
+        max_velocity : _parsed_packet.max_velocity,
+        desired_yaw : _parsed_packet.desired_yaw,
+        target_lon : _parsed_packet.target_lon,
+        target_lat : _parsed_packet.target_lat,
+        target_alt : _parsed_packet.target_alt,
+        target_yaw : _parsed_packet.target_yaw,
+        target_velocity : _parsed_packet.target_velocity,
+        yaw_max_rate : _parsed_packet.yaw_max_rate,
     };
     AP::logger().WriteBlock(&pkt, sizeof(pkt));
     

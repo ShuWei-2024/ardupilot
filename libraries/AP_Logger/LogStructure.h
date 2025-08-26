@@ -659,7 +659,7 @@ struct PACKED log_c2hc {
   int16_t x_axis_err;
   int16_t y_axis_err;
   int16_t z_axis_err;
-  float fast_velocity;
+  float max_velocity;
   float desired_yaw;
   double target_lon;
   double target_lat;

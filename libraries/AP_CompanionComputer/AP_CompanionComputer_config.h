@@ -19,8 +19,8 @@
 // byte 9               Y_axis_err_H        Y axis error high 8 bits
 // bute 10              Z_axis_err_L        Z axis error low 8 bits
 // byte 11              Z_axis_err_H        Z axis error high 8 bits
-// byte 12              Fast_Velocity_L     feihu quadrotor could reach the fastest velocity low 8 bits
-// byte 13              Fast_Velocity_H     feihu quadrotor could reach the fastest velocity high 8 bits
+// byte 12              max_velocity_L     feihu quadrotor could reach the fastest velocity low 8 bits
+// byte 13              max_velocity_H     feihu quadrotor could reach the fastest velocity high 8 bits
 // byte 14              YAW_L               desired yaw data low 8 bits
 // byte 15              YAW_H               desired yaw data high 8 bits
 // byte 16              Target_lon8         target uav's longitude low 8 bits
@@ -112,7 +112,7 @@ typedef struct {
     int16_t x_axis_err;
     int16_t y_axis_err;
     int16_t z_axis_err;
-    uint16_t fast_velocity;
+    uint16_t max_velocity;
     int16_t desired_yaw;
     int32_t target_lon;
     int32_t target_lat;
@@ -146,3 +146,19 @@ typedef struct {
     uint8_t end_sign;
 } CompanionSendPacket;
 #pragma pack(pop)
+
+struct ParsedPacket
+{
+    uint8_t ctrl_mode;
+    int16_t x_axis_err;
+    int16_t y_axis_err;
+    int16_t z_axis_err;
+    float max_velocity;
+    float desired_yaw;
+    double_t target_lon;
+    double_t target_lat;
+    float target_alt;
+    float target_yaw;
+    float target_velocity;
+    float yaw_max_rate;
+};
