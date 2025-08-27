@@ -131,7 +131,7 @@ typedef struct {
     uint8_t header1;
     uint8_t header2;
     uint8_t cmd_source;
-    uint8_t cmd_content;
+    uint8_t cmd_content;    //指令类型
     uint8_t data_length;
     uint8_t ctrl_mode;
     uint8_t battery_percent;
@@ -139,9 +139,9 @@ typedef struct {
     int32_t my_lat;
     int16_t my_alt;
     uint16_t my_velocity;
+    int16_t my_yaw;
     int16_t my_roll;
     int16_t my_pitch;
-    int16_t my_yaw;
     uint8_t checksum;
     uint8_t end_sign;
 } CompanionSendPacket;
