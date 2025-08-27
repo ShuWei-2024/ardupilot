@@ -6,6 +6,8 @@
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include "AP_CompanionComputer_config.h"
+#include <array>
+#include <utility>
 
 
 class AP_CompanionComputer {
@@ -17,29 +19,21 @@ public:
     AP_CompanionComputer &operator=(const AP_CompanionComputer&) = delete;
 
     void init();
-
     void update();
-
-    // accessor for uart
-   // AP_HAL::UARTDriver get_uart() { return _uart; }
-
-    AP_Int8 enabled() { return _enable; };
-
     void send_data();
-
-    static const struct AP_Param::GroupInfo var_info[];
-
-    const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
     
+    AP_Int8 enabled() { return _enable; };
+    static const struct AP_Param::GroupInfo var_info[];
+    const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
     #define PACKET_TIMEOUT_MS 200
     AP_Int8 _enable;          
-    AP_Int8 _port_index;        // the index of instance for companion computer, first companion computer serial is 0:Serial0
+    AP_Int8 _port_index;        // the index of instance for companion computer
 
     // receive state machine
-    enum RxState
+    enum class RxState
     {
         WAITING_HEADER1,
         WAITING_HEADER2,

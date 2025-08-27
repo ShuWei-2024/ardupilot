@@ -1,8 +1,7 @@
 #include <AP_HAL/AP_HAL.h>
 #pragma once
 
-/*********************************************
-*        接收通信协议
+/************接收通信协议*********************************
 // format of serial packets received from companion computer
 //
 // Data Bit             Definition          Description
@@ -44,8 +43,7 @@
 
 *********************************************/
 
-/*********************************************
-*        发送通信协议
+/************发送通信协议*********************************    
 // format of serial packets send to companion computer
 //
 // Data Bit             Definition          Description
@@ -88,13 +86,13 @@
 #define COMPANION_CMD_SOURCE_FC         0xBB
 #define COMPANION_END_SIGN              0xFF
 #define COMPANION_CMD_CONTENT           0x01
-#define COMPANION_RECV_TOTAL_LENGTH     34
-#define COMPANION_RECV_DATA_LENGTH      0x1B // length of receive Data for Byte of companion_computer is 27
-#define COMPANION_SEND_TOTAL_LENGTH     27
-#define COMPANION_SEND_DATA_LENGTH      0x14 // length of send Data for Byte of companion_computer is 20
+#define COMPANION_RECV_TOTAL_LENGTH     36
+#define COMPANION_RECV_DATA_LENGTH      0x1D // length of receive Data for Byte of companion_computer is 27
+#define COMPANION_SEND_TOTAL_LENGTH     29
+#define COMPANION_SEND_DATA_LENGTH      0x16 // length of send Data for Byte of companion_computer is 20
 
 // 控制模式枚举
-enum CompanionCtrlMode {
+enum class CompanionCtrlMode : uint8_t {
     CTRL_MODE_DISTANCE = 0x01,
     CTRL_MODE_HOVER    = 0x02,
     CTRL_MODE_GUIDE    = 0x03
@@ -116,7 +114,7 @@ typedef struct {
     int16_t desired_yaw;
     int32_t target_lon;
     int32_t target_lat;
-    int16_t target_alt;
+    int32_t target_alt;
     int16_t target_yaw;
     uint16_t target_velocity;
     uint16_t yaw_max_rate;
@@ -137,7 +135,7 @@ typedef struct {
     uint8_t battery_percent;
     int32_t my_lon;
     int32_t my_lat;
-    int16_t my_alt;
+    int32_t my_alt;
     uint16_t my_velocity;
     int16_t my_yaw;
     int16_t my_roll;
