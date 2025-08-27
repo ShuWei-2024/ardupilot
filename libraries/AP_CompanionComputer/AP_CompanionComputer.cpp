@@ -26,7 +26,7 @@ const AP_Param::GroupInfo AP_CompanionComputer::var_info[] = {
 AP_CompanionComputer::AP_CompanionComputer() 
 {
     AP_Param::setup_object_defaults(this, var_info);
-    _rx_state = WAITING_HEADER1;
+    _rx_state = RxState::WAITING_HEADER1;
     _rx_count = 0;
     _uart = nullptr;
 }
@@ -62,51 +62,51 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
     const uint32_t now = AP_HAL::millis();
     
     switch (_rx_state) {
-    case WAITING_HEADER1:
+    case RxState::WAITING_HEADER1:
         if (oneByte == COMPANION_FRAME_HEADER1) {
-            _rx_state = WAITING_HEADER2;
+            _rx_state = RxState::WAITING_HEADER2;
             _rx_start_time = now;
             _rx_count = 0;
         }
         break;
 
-    case WAITING_HEADER2:
+    case RxState::WAITING_HEADER2:
         if (oneByte == COMPANION_FRAME_HEADER2) {
-            _rx_state = WAITING_SOURCE;
+            _rx_state = RxState::WAITING_SOURCE;
             // 存储帧头
             _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER1;
             _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER2;
         } else {
-            _rx_state = WAITING_HEADER1;
+            _rx_state = RxState::WAITING_HEADER1;
         }
         break;
 
-    case WAITING_SOURCE:
-        _rx_state = WAITING_TYPE;
+    case RxState::WAITING_SOURCE:
+        _rx_state = RxState::WAITING_TYPE;
         _cmd_source = oneByte;
         _rx_buffer[_rx_count++] = oneByte;
         break;
 
-    case WAITING_TYPE:
+    case RxState::WAITING_TYPE:
         if(oneByte > 0x03){
-            _rx_state = WAITING_HEADER1;
+            _rx_state = RxState::WAITING_HEADER1;
             _rx_count = 0;
             break;
         }
-        _rx_state = WAITING_LENGTH;
+        _rx_state = RxState::WAITING_LENGTH;
         _cmd_type = oneByte;
         _rx_buffer[_rx_count++] = oneByte;
         break;
 
-    case WAITING_LENGTH:
-        _rx_state = RECEIVING_DATA;
+    case RxState::WAITING_LENGTH:
+        _rx_state = RxState::RECEIVING_DATA;
         _data_len = oneByte;
         _rx_buffer[_rx_count++] = oneByte;
         break;
 
-    case RECEIVING_DATA:
+    case RxState::RECEIVING_DATA:
         if (now - _rx_start_time > PACKET_TIMEOUT_MS) {
-            _rx_state = WAITING_HEADER1;
+            _rx_state = RxState::WAITING_HEADER1;
             _rx_count = 0;
             break;
         }
@@ -136,8 +136,8 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
                     break;
                 }
             }
-            
-            _rx_state = WAITING_HEADER1;
+
+            _rx_state = RxState::WAITING_HEADER1;
             _rx_count = 0;
         }
         break;
@@ -254,7 +254,7 @@ void AP_CompanionComputer::send_data()
         pkt.my_lat = loc.lat;
         pkt.my_alt = loc.alt / 100; // cm转m
     }
-    pkt.my_alt = _parsed_packet.x_axis_err;         //debug，务必删除
+    // pkt.my_alt = _parsed_packet.x_axis_err;         //debug，务必删除
 
     // 获取速度
     Vector3f velocity;
