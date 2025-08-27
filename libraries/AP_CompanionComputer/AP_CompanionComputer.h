@@ -8,7 +8,6 @@
 #include "AP_CompanionComputer_config.h"
 
 
-
 class AP_CompanionComputer {
 public:
     AP_CompanionComputer();
@@ -26,8 +25,6 @@ public:
 
     AP_Int8 enabled() { return _enable; };
 
-    void process_received_data(uint8_t byte);
-
     void send_data();
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -42,9 +39,13 @@ private:
     AP_Int8 _port_index;        // the index of instance for companion computer, first companion computer serial is 0:Serial0
 
     // receive state machine
-    enum RxState {
+    enum RxState
+    {
         WAITING_HEADER1,
         WAITING_HEADER2,
+        WAITING_SOURCE,
+        WAITING_TYPE,
+        WAITING_LENGTH,
         RECEIVING_DATA
     } _rx_state;
 
@@ -55,6 +56,11 @@ private:
     uint8_t _rx_count;
     uint32_t _rx_start_time;
     uint32_t _last_received_ms;
+    void process_received_data(uint8_t byte);
+    void parse_flight_control_data(uint8_t *buffer);
+    void parse_parameter_data(uint8_t *buffer);
+    void parse_system_command(uint8_t *buffer);
+    void send_response(uint8_t data, uint8_t status);
 
     // send counter
     uint32_t _last_sent_ms;
@@ -67,4 +73,8 @@ private:
     int print_count = 0;
     uint32_t _log_c2hc_bit = -1;
     void Log_C2HC() const;
+
+    uint8_t _cmd_source;
+    uint8_t _cmd_type;
+    uint8_t _data_len;
 };

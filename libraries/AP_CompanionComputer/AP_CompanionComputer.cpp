@@ -66,74 +66,150 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
         if (oneByte == COMPANION_FRAME_HEADER1) {
             _rx_state = WAITING_HEADER2;
             _rx_start_time = now;
+            _rx_count = 0;
         }
-
         break;
 
     case WAITING_HEADER2:
         if (oneByte == COMPANION_FRAME_HEADER2) {
-            _rx_buffer[0] = COMPANION_FRAME_HEADER1;
-            _rx_buffer[1] = COMPANION_FRAME_HEADER2;
-            _rx_count = 2;
-            _rx_state = RECEIVING_DATA;
+            _rx_state = WAITING_SOURCE;
+            // 存储帧头
+            _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER1;
+            _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER2;
         } else {
             _rx_state = WAITING_HEADER1;
         }
+        break;
 
+    case WAITING_SOURCE:
+        _rx_state = WAITING_TYPE;
+        _cmd_source = oneByte;
+        _rx_buffer[_rx_count++] = oneByte;
+        break;
+
+    case WAITING_TYPE:
+        if(oneByte > 0x03){
+            _rx_state = WAITING_HEADER1;
+            _rx_count = 0;
+            break;
+        }
+        _rx_state = WAITING_LENGTH;
+        _cmd_type = oneByte;
+        _rx_buffer[_rx_count++] = oneByte;
+        break;
+
+    case WAITING_LENGTH:
+        _rx_state = RECEIVING_DATA;
+        _data_len = oneByte;
+        _rx_buffer[_rx_count++] = oneByte;
         break;
 
     case RECEIVING_DATA:
-        if (now - _rx_start_time > PACKET_TIMEOUT_MS){
+        if (now - _rx_start_time > PACKET_TIMEOUT_MS) {
             _rx_state = WAITING_HEADER1;
             _rx_count = 0;
             break;
         }
 
         _rx_buffer[_rx_count++] = oneByte;
-        if (_rx_count >= sizeof(_rx_buffer)) {
-            // 完整数据包接收
-            if (validate_packet(_rx_buffer)){
-                memcpy(&_received_packet, _rx_buffer, sizeof(_received_packet));
-                _parsed_packet.ctrl_mode = _received_packet.ctrl_mode;
-                _parsed_packet.x_axis_err = _received_packet.x_axis_err;
-                _parsed_packet.y_axis_err = _received_packet.y_axis_err;
-                _parsed_packet.z_axis_err = _received_packet.z_axis_err;
-                _parsed_packet.max_velocity = float(_received_packet.max_velocity) / 100.0, //转换回浮点
-                _parsed_packet.desired_yaw = float(_received_packet.desired_yaw) / 100.0,
-                _parsed_packet.target_lon = double(_received_packet.target_lon) / 1e7,
-                _parsed_packet.target_lat = double(_received_packet.target_lat) / 1e7,
-                _parsed_packet.target_alt = float(_received_packet.target_alt) / 100.0,
-                _parsed_packet.target_yaw = float(_received_packet.target_yaw) / 100.0,
-                _parsed_packet.target_velocity = float(_received_packet.target_velocity) / 100.0,
-                _parsed_packet.yaw_max_rate = float(_received_packet.yaw_max_rate) / 1000.0,
-
-#if HAL_LOGGING_ENABLED
-                Log_C2HC();
-#endif
-                // hal.console->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
-                //                     _received_packet.x_axis_err,
-                //                     _received_packet.y_axis_err,
-                //                     _received_packet.z_axis_err,
-                //                     _received_packet.target_lon,
-                //                     _received_packet.target_lat,
-                //                     _received_packet.target_alt,
-                //                     _received_packet.target_yaw,
-                //                     _received_packet.target_velocity);   //debug-print
-                // _uart->printf("companion computer uart: %u ,%u, %u;;  %ld, %ld;;  %d, %d, %d\r\n",
-                //                 _received_packet.x_axis_err,
-                //                 _received_packet.y_axis_err,
-                //                 _received_packet.z_axis_err,
-                //                 _received_packet.target_lon,
-                //                 _received_packet.target_lat,
-                //                 _received_packet.target_alt,
-                //                 _received_packet.target_yaw,
-                //                 _received_packet.target_velocity);
-            }
+        
+        // 检查是否接收到完整数据包（包括帧头、校验和、结束符）
+        if (_rx_count >= (_data_len + 7)) {
+            // 完整数据包接收，进行校验
+            if (validate_packet(_rx_buffer)) {
+                // 提取指令类型
+                _cmd_type = _rx_buffer[3]; // 指令类型在第4个字节
                 
+                // 根据指令类型解析数据
+                switch (_cmd_type) {
+                case 0x01: // 飞行控制信息
+                    parse_flight_control_data(_rx_buffer);
+                    break;
+                case 0x02: // 飞控参数设置
+                    parse_parameter_data(_rx_buffer);
+                    break;
+                case 0x03: // 系统控制
+                    parse_system_command(_rx_buffer);
+                    break;
+                default:
+                    // 未知指令类型
+                    break;
+                }
+            }
+            
             _rx_state = WAITING_HEADER1;
+            _rx_count = 0;
         }
         break;
     }
+}
+
+// 解析飞行控制数据
+void AP_CompanionComputer::parse_flight_control_data(uint8_t* buffer)
+{
+    memcpy(&_received_packet, buffer, sizeof(_received_packet));
+    _parsed_packet.ctrl_mode = _received_packet.ctrl_mode;
+    _parsed_packet.x_axis_err = _received_packet.x_axis_err;
+    _parsed_packet.y_axis_err = _received_packet.y_axis_err;
+    _parsed_packet.z_axis_err = _received_packet.z_axis_err;
+    _parsed_packet.max_velocity = float(_received_packet.max_velocity) / 100.0;
+    _parsed_packet.desired_yaw = float(_received_packet.desired_yaw) / 100.0;
+    _parsed_packet.target_lon = double(_received_packet.target_lon) / 1e7;
+    _parsed_packet.target_lat = double(_received_packet.target_lat) / 1e7;
+    _parsed_packet.target_alt = float(_received_packet.target_alt) / 100.0;
+    _parsed_packet.target_yaw = float(_received_packet.target_yaw) / 100.0;
+    _parsed_packet.target_velocity = float(_received_packet.target_velocity) / 100.0;
+    _parsed_packet.yaw_max_rate = float(_received_packet.yaw_max_rate) / 1000.0;
+
+#if HAL_LOGGING_ENABLED
+    Log_C2HC();
+#endif
+}
+
+// 解析参数设置数据（待实现）
+void AP_CompanionComputer::parse_parameter_data(uint8_t *buffer)
+{
+    // 根据具体参数格式实现解析逻辑
+    // 示例：提取参数索引和值
+    // uint8_t param_index = buffer[3]; // 假设参数索引在第四个字节
+    // float param_value = *reinterpret_cast<float*>(&buffer[4]); // 假设参数值从第五个字节开始
+    // set_parameter(param_index, param_value);
+    send_response(0x01, 0x01);
+}
+
+
+// 解析系统控制命令
+void AP_CompanionComputer::parse_system_command(uint8_t* buffer)
+{
+    // 提取命令数据（假设命令数据在第四个字节）
+    uint8_t cmd_data = buffer[3];
+    uint8_t status = 0x01;
+    switch (cmd_data) {
+    case 0x02: // 重启
+        // 执行重启逻辑
+        break;
+    case 0x03: // 关机
+        // 执行关机逻辑
+        break;
+    default:
+        // 未知命令
+        send_response(0xFF, 0x02);
+        break;
+    }
+    send_response(cmd_data, status);
+}
+
+// 校验数据包（需要根据协议实现）TODO：要根据长度改
+bool AP_CompanionComputer::validate_packet(const uint8_t *buffer) const
+{
+    // 计算校验和
+    // 校验和在倒数第二个字节，结束符在最后一个字节
+    uint8_t calculated_checksum = 0;
+    for (int i = 0; i < _rx_count - 2; i++) {
+        calculated_checksum += buffer[i];
+    }
+
+    return (calculated_checksum == buffer[_rx_count - 2]) && (buffer[_rx_count - 1] == 0xFF);
 }
 
 void AP_CompanionComputer::send_data() 
@@ -178,6 +254,7 @@ void AP_CompanionComputer::send_data()
         pkt.my_lat = loc.lat;
         pkt.my_alt = loc.alt / 100; // cm转m
     }
+    pkt.my_alt = _parsed_packet.x_axis_err;         //debug，务必删除
 
     // 获取速度
     Vector3f velocity;
@@ -200,6 +277,32 @@ void AP_CompanionComputer::send_data()
     _last_sent_ms = now;
 }
 
+void AP_CompanionComputer::send_response(uint8_t data, uint8_t status)
+{
+    // 计算数据包总长度：同步字节(2) + 指令来源(1) + 指令类型(1) + 数据长度(1) + 数据(2) + 校验位(1) + 结束位(1)
+    const uint8_t packet_length = 9;
+    uint8_t response_buffer[packet_length];
+    response_buffer[0] = COMPANION_FRAME_HEADER1; // 同步字节1
+    response_buffer[1] = COMPANION_FRAME_HEADER2; // 同步字节2
+    response_buffer[2] = COMPANION_CMD_SOURCE_FC; // 来自FCU
+    response_buffer[3] = 0x02; // 控制指令反馈
+    response_buffer[4] = 0x02; // 数据位长度
+    response_buffer[5] = data;   // 收到的指令数据
+    response_buffer[6] = status; // 执行状态
+    // 计算校验和（从同步字节到数据结束）
+    uint8_t checksum = 0;
+    for (int i = 0; i < 7; i++)
+    {
+        checksum += response_buffer[i];
+    }
+    response_buffer[7] = checksum; // 校验位
+    // 填充结束位
+    response_buffer[8] = 0xFF; // 结束符
+
+    // 通过串口发送数据
+    _uart->write(response_buffer, packet_length);
+}
+
 uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t len) const 
 {
     uint8_t sum = 0;
@@ -209,19 +312,6 @@ uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t le
     return sum & 0xFF;
 }
 
-bool AP_CompanionComputer::validate_packet(const uint8_t *pkt) const 
-{
-    // 验证头尾
-    if (pkt[0] != COMPANION_FRAME_HEADER1 ||
-        pkt[1] != COMPANION_FRAME_HEADER2 ||
-        pkt[33] != COMPANION_END_SIGN) {
-        return false;
-    }
-    
-    // 验证校验和
-    uint8_t calc_checksum = calculate_checksum(pkt, COMPANION_RECV_TOTAL_LENGTH-2);
-    return (calc_checksum == pkt[32]);
-}
 
 #if HAL_LOGGING_ENABLED
 void AP_CompanionComputer::Log_C2HC() const
