@@ -6,8 +6,6 @@
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include "AP_CompanionComputer_config.h"
-#include <array>
-#include <utility>
 
 
 class AP_CompanionComputer {
@@ -28,8 +26,8 @@ public:
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
-    #define PACKET_TIMEOUT_MS 200
-    AP_Int8 _enable;          
+    constexpr static uint32_t PACKET_TIMEOUT_MS = 200;
+    AP_Int8 _enable;
     AP_Int8 _port_index;        // the index of instance for companion computer
 
     // receive state machine
@@ -46,24 +44,21 @@ private:
     // received buff
     CompanionReceivePacket _received_packet;
     ParsedPacket _parsed_packet;
-    uint8_t _rx_buffer[sizeof(CompanionReceivePacket)];
+    std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
     uint8_t _rx_count;
     uint32_t _rx_start_time;
     uint32_t _last_received_ms;
-    void process_received_data(uint8_t byte);
-    void parse_flight_control_data(uint8_t *buffer);
-    void parse_parameter_data(uint8_t *buffer);
-    void parse_system_command(uint8_t *buffer);
-    void send_response(uint8_t data, uint8_t status);
-
-    // send counter
     uint32_t _last_sent_ms;
 
+    void process_received_data(uint8_t oneByte);
+    void parse_flight_control_data();
+    void parse_parameter_data();
+    void parse_system_command();
+    void send_response(uint8_t data, uint8_t status);
+
     AP_HAL::UARTDriver *_uart;
-    // crc checksum
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
-    // receive validate
-    bool validate_packet(const uint8_t *pkt) const;
+    bool validate_packet() const;
     int print_count = 0;
     uint32_t _log_c2hc_bit = -1;
     void Log_C2HC() const;

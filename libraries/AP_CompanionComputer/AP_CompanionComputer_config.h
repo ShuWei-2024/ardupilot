@@ -1,4 +1,6 @@
 #include <AP_HAL/AP_HAL.h>
+#include <array>
+#include <utility>
 #pragma once
 
 /************接收通信协议*********************************
@@ -73,23 +75,24 @@
 // byte 22              My_Pitch_H          my uav's current Pitch angle high 8 bits
 // byte 23              My_Yaw_L            my uav's current Yaw angle low 8 bits
 // byte 24              My_Yaw_H            my uav's current Yaw angle high 8 bits// byte 6               
-// byte 25              Checksum            low 8 bits of Checksum byte, sum of bytes 0 to bytes 8
+// byte 25              Checksum            low 8 bits of Checksum byte
 // byte 26              end sign            the end of the packets, default is 0xFF
 
 *********************************************/
 
 
 // 协议常量定义
-#define COMPANION_FRAME_HEADER1         0xA5
-#define COMPANION_FRAME_HEADER2         0x5A
-#define COMPANION_CMD_SOURCE_RCVR       0xAA
-#define COMPANION_CMD_SOURCE_FC         0xBB
-#define COMPANION_END_SIGN              0xFF
-#define COMPANION_CMD_CONTENT           0x01
-#define COMPANION_RECV_TOTAL_LENGTH     36
-#define COMPANION_RECV_DATA_LENGTH      0x1D // length of receive Data for Byte of companion_computer is 27
-#define COMPANION_SEND_TOTAL_LENGTH     29
-#define COMPANION_SEND_DATA_LENGTH      0x16 // length of send Data for Byte of companion_computer is 20
+constexpr uint8_t COMPANION_FRAME_HEADER1     = 0xA5;
+constexpr uint8_t COMPANION_FRAME_HEADER2     = 0x5A;
+constexpr uint8_t COMPANION_CMD_SOURCE_RCVR   = 0xAA;
+constexpr uint8_t COMPANION_CMD_SOURCE_FC     = 0xBB;
+constexpr uint8_t COMPANION_END_SIGN          = 0xFF;
+constexpr uint8_t COMPANION_CMD_CONTENT       = 0x01;
+constexpr uint8_t COMPANION_RECV_TOTAL_LENGTH = 36;
+constexpr uint8_t COMPANION_RECV_DATA_LENGTH  = 0x1D;
+constexpr uint8_t COMPANION_SEND_TOTAL_LENGTH = 29;
+constexpr uint8_t COMPANION_SEND_DATA_LENGTH  = 0x16;
+constexpr uint8_t COMPANION_SEND_RESP_LENGTH  = 0x09;
 
 // 控制模式枚举
 enum class CompanionCtrlMode : uint8_t {
@@ -100,7 +103,7 @@ enum class CompanionCtrlMode : uint8_t {
 
 // 接收包结构
 #pragma pack(push, 1)
-typedef struct {
+struct CompanionReceivePacket {
     uint8_t header1;
     uint8_t header2;
     uint8_t cmd_source;
@@ -120,12 +123,12 @@ typedef struct {
     uint16_t yaw_max_rate;
     uint8_t checksum;
     uint8_t end_sign;
-} CompanionReceivePacket;
+};
 #pragma pack(pop)
 
 // 发送包结构
 #pragma pack(push, 1)
-typedef struct {
+struct CompanionSendPacket {
     uint8_t header1;
     uint8_t header2;
     uint8_t cmd_source;
@@ -142,7 +145,7 @@ typedef struct {
     int16_t my_pitch;
     uint8_t checksum;
     uint8_t end_sign;
-} CompanionSendPacket;
+};
 #pragma pack(pop)
 
 struct ParsedPacket
@@ -159,4 +162,22 @@ struct ParsedPacket
     float target_yaw;
     float target_velocity;
     float yaw_max_rate;
+};
+
+// 数据包构建器
+class PacketBuilder {
+public:
+    template <typename T>
+    static std::array<uint8_t, sizeof(T)> serialize(const T& packet) {
+        std::array<uint8_t, sizeof(T)> buffer;
+        memcpy(buffer.data(), &packet, sizeof(T));
+        return buffer;
+    }
+
+    template <typename T>
+    static T deserialize(const uint8_t* data) {
+        T packet;
+        memcpy(&packet, data, sizeof(T));
+        return packet;
+    }
 };
