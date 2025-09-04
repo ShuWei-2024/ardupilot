@@ -204,12 +204,8 @@ void AP_CompanionComputer::parse_system_command()
 // 校验数据包（需要根据协议实现）
 bool AP_CompanionComputer::validate_packet() const
 {
-    // 计算校验和
     // 校验和在倒数第二个字节，结束符在最后一个字节
-    uint8_t calculated_checksum = 0;
-    for (int i = 0; i < _rx_count - 2; i++) {
-        calculated_checksum += _rx_buffer[i];
-    }
+    uint8_t calculated_checksum = calculate_checksum(_rx_buffer.data(), _rx_buffer.size());
 
     return (calculated_checksum == _rx_buffer[_rx_count - 2]) && (_rx_buffer[_rx_count - 1] == 0xFF);
 }
@@ -303,7 +299,7 @@ void AP_CompanionComputer::send_response(uint8_t data, uint8_t status)
 uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t len) const 
 {
     uint8_t sum = 0;
-    for (uint8_t i = 0; i < len; i++) {
+    for (uint8_t i = 2; i < len; i++) { //不计算帧头
         sum += data[i];
     }
     return sum & 0xFF;
