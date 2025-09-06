@@ -29,6 +29,7 @@ private:
     constexpr static uint32_t PACKET_TIMEOUT_MS = 200;
     AP_Int8 _enable;
     AP_Int8 _port_index;        // the index of instance for companion computer
+    AP_Int8 _aes;
 
     // receive state machine
     enum class RxState

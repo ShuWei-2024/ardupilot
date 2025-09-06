@@ -20,8 +20,14 @@ const AP_Param::GroupInfo AP_CompanionComputer::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("PORT", 2, AP_CompanionComputer, _port_index, 0),
 
-    AP_GROUPEND
-};
+    // @Param: AES
+    // @DisplayName: Enable AES encryption
+    // @Description: AES encryption
+    // @Values: 0:disabled, 1:enabled
+    // @User: Advanced
+    AP_GROUPINFO("AES", 1, AP_CompanionComputer, _aes, 0),
+
+    AP_GROUPEND};
 
 AP_CompanionComputer::AP_CompanionComputer() :
     _rx_state(RxState::WAITING_HEADER1),
