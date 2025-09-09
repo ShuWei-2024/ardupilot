@@ -146,7 +146,7 @@ void comm_send_buffer(mavlink_channel_t chan, const uint8_t *buf, uint8_t len)
         // an alternative protocol is active
         return;
     }
-    const size_t written = mavlink_comm_port[chan]->write(buf, len);
+    const size_t written = mavlink_comm_port[chan]->write(buf, len);    //加密发送改这里，替换write
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     if (written < len && !mavlink_comm_port[chan]->is_write_locked()) {
         AP_HAL::panic("Short write on UART: %lu < %u", (unsigned long)written, len);

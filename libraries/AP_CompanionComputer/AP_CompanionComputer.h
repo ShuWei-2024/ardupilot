@@ -6,7 +6,7 @@
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include "AP_CompanionComputer_config.h"
-
+#include "Encrypt/encrypt.hpp"
 
 class AP_CompanionComputer {
 public:
@@ -45,7 +45,9 @@ private:
     // received buff
     CompanionReceivePacket _received_packet;
     ParsedPacket _parsed_packet;
-    std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
+    std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;//拼帧用
+    std::array<uint8_t, 128> _rx_buffer_decrypted;//解密后的串口数据
+    std::array<uint8_t, 128> _encrypted_buffer;     //加密的数据
     uint8_t _rx_count;
     uint32_t _rx_start_time;
     uint32_t _last_received_ms;
@@ -58,6 +60,7 @@ private:
     void send_response(uint8_t data, uint8_t status);
 
     AP_HAL::UARTDriver *_uart;
+    AES_Encrypt _aes_encryptor;
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
     bool validate_packet() const;
     int print_count = 0;

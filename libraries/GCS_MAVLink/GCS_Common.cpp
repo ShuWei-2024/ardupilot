@@ -1785,7 +1785,7 @@ GCS_MAVLINK::update_receive(uint32_t max_time_us)
     const uint16_t nbytes = _port->available();
     for (uint16_t i=0; i<nbytes; i++)
     {
-        const uint8_t c = (uint8_t)_port->read();
+        const uint8_t c = (uint8_t)_port->read();   //TODO:解密接收在这里改，替换read函数（一次1个字节）
         const uint32_t protocol_timeout = 4000;
         
         if (alternative.handler &&
@@ -2485,7 +2485,7 @@ void GCS::update_send()
 void GCS::update_receive(void)
 {
     for (uint8_t i=0; i<num_gcs(); i++) {
-        chan(i)->update_receive();
+        chan(i)->update_receive();      //TODO:时间改长一点
     }
     // also update UART pass-thru, if enabled
     update_passthru();

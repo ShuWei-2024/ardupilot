@@ -1,6 +1,7 @@
 #include "AP_CompanionComputer.h"
-#include <AP_SerialManager/AP_SerialManager.h>
+#include "Encrypt/encrypt.hpp"
 #include <AP_Logger/AP_Logger.h>
+#include <AP_SerialManager/AP_SerialManager.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -33,7 +34,8 @@ AP_CompanionComputer::AP_CompanionComputer() :
     _rx_state(RxState::WAITING_HEADER1),
     _rx_count(0),
     _uart(nullptr),
-    _log_c2hc_bit(-1) 
+    _log_c2hc_bit(-1),
+    _aes_encryptor(AES_KEY, AES_IV) 
     {
     AP_Param::setup_object_defaults(this, var_info);
     _rx_buffer.fill(0);
@@ -51,6 +53,9 @@ void AP_CompanionComputer::init()
         _uart->begin(115200, 512, 128);
         // hal.console->printf("---------companion uart begin-------:\n");  //debug-print
     }    
+    if(_aes){
+        _aes_encryptor.init();
+    }
 }
 
 void AP_CompanionComputer::update()
@@ -61,7 +66,18 @@ void AP_CompanionComputer::update()
     while (_uart->available() > 0) {
         uint8_t byte;
         if (_uart->read(&byte, 1)) {
-            process_received_data(byte);
+            if(_aes){
+                _aes_encryptor.feed_rx(byte);
+                size_t plain_len = _aes_encryptor.parse(_rx_buffer_decrypted.data(), _rx_buffer_decrypted.size());
+                if (plain_len > 0) {
+                    // 将解密后的数据送入原始状态机
+                    for (size_t i = 0; i < plain_len; i++) {
+                        process_received_data(_rx_buffer_decrypted[i]);
+                    }
+                }
+            }else{
+                process_received_data(byte);
+            }
         }
     }
 }
@@ -223,7 +239,7 @@ void AP_CompanionComputer::send_data()
     }
 
     const uint32_t now = AP_HAL::millis();
-    if (now - _last_sent_ms < 20) { // 50Hz
+    if (now - _last_sent_ms < 50) { // 20Hz
         return;
     }
 
@@ -278,7 +294,14 @@ void AP_CompanionComputer::send_data()
     packet[packet.size()-1] = COMPANION_END_SIGN;
 
     // 发送数据
-    _uart->write(packet.data(), packet.size());
+    if(_aes){
+        size_t encrypted_len = _aes_encryptor.encrypt_frame(packet.data(), packet.size(), _encrypted_buffer.data(), _encrypted_buffer.size());
+        if(encrypted_len > 0) {
+            _uart->write(_encrypted_buffer.data(), encrypted_len);
+        }
+    }else{
+            _uart->write(packet.data(), packet.size());
+    }
     _last_sent_ms = now;
 }
 

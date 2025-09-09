@@ -30,9 +30,9 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <Tinycrypt/aes.h>
-#include <Tinycrypt/constants.h>
-#include <Tinycrypt/utils.h>
+#include "aes.h"
+#include "constants.h"
+#include "utils.h"
 
 static const uint8_t sbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
