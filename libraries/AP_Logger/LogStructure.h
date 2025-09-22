@@ -1303,7 +1303,9 @@ LOG_STRUCTURE_FROM_AIS \
     { LOG_MOTBATT_MSG, sizeof(log_MotBatt), \
       "MOTB", "QfffffB",  "TimeUS,LiftMax,BatVolt,ThLimit,ThrAvMx,ThrOut,FailFlags", "s------", "F------" , true }, \
     { LOG_C2HC_MSG, sizeof(log_c2hc), \
-      "C2HC", "QBhhhffddffff", "TimeUS,CtrlMode,Xerr,Yerr,Zerr,MaxVel,DesYaw,TarLon,TarLat,TarAlt,TarYaw,TarVel,YawMaxRate", "s----ndDDmdnk","F------------", false}
+      "C2HC", "QBhhhffddffff", \
+      "TimeUS,Mode,Xe,Ye,Ze,MxV,DY,TLon,TLat,TAlt,TYaw,TVel,YawMR", \
+      "s----ndDDmdnk", "F------------", false}
 
 // message types 0 to 31 reserved for vehicle-specific use
 
