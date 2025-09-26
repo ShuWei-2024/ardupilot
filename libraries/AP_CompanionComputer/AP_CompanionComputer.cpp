@@ -134,6 +134,9 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
                     // 未知指令类型
                     break;
                 }
+            }else{
+                // 校验失败，丢弃数据包
+                // _uart->write("checksum error\n");  // debug-print
             }
 
             _rx_state = RxState::WAITING_HEADER1;
@@ -201,11 +204,11 @@ void AP_CompanionComputer::parse_system_command()
     send_response(cmd_data, status);
 }
 
-// 校验数据包（需要根据协议实现）
+// 校验数据包（从指令来源到数据体最后一位，加和取低八位）
 bool AP_CompanionComputer::validate_packet() const
 {
     // 校验和在倒数第二个字节，结束符在最后一个字节
-    uint8_t calculated_checksum = calculate_checksum(_rx_buffer.data(), _rx_buffer.size());
+    uint8_t calculated_checksum = calculate_checksum(_rx_buffer.data(), _rx_buffer.size()-2);
 
     return (calculated_checksum == _rx_buffer[_rx_count - 2]) && (_rx_buffer[_rx_count - 1] == 0xFF);
 }
@@ -287,8 +290,8 @@ void AP_CompanionComputer::send_response(uint8_t data, uint8_t status)
     response_buffer[4] = 0x02; // 数据位长度
     response_buffer[5] = data;   // 收到的指令数据
     response_buffer[6] = status; // 执行状态
-    // 计算校验和（从同步字节到数据结束）
-    response_buffer[7] = calculate_checksum(response_buffer.data(), response_buffer.size() - 2);
+    // 计算校验和（从指令来源到数据体结束）
+    response_buffer[7] = calculate_checksum(response_buffer.data(), response_buffer.size()-2);
     // 填充结束位
     response_buffer[8] = 0xFF; // 结束符
 
