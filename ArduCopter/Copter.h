@@ -995,7 +995,11 @@ private:
     void userhook_auxSwitch2(const RC_Channel::AuxSwitchPos ch_flag);
     void userhook_auxSwitch3(const RC_Channel::AuxSwitchPos ch_flag);
 
-#if MODE_ACRO_ENABLED == ENABLED
+    // comm_companion_computer.cpp
+    void receive_companion_computer();
+    void send2_companion_computer();
+
+#if MODE_ACRO_ENABLED
 #if FRAME_CONFIG == HELI_FRAME
     ModeAcro_Heli mode_acro;
 #else
