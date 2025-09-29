@@ -22,7 +22,8 @@ public:
     
     AP_Int8 enabled() { return _enable; };
     static const struct AP_Param::GroupInfo var_info[];
-    const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
+    // const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
+    const CompanionReceivePacket& get_received_packet() const { return _received_packet; }    //传出数据
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
@@ -43,7 +44,7 @@ private:
 
     // received buff
     CompanionReceivePacket _received_packet;
-    ParsedPacket _parsed_packet;
+    // ParsedPacket _parsed_packet;
     std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
     uint8_t _rx_count;
     uint32_t _rx_start_time;

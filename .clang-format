@@ -1,0 +1,47 @@
+# ArduPilot .clang-format  (兼容原 astylerc)
+# 保存为项目根目录 .clang-format
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# 1. 4 空格缩进，不用 tab
+IndentWidth: 4
+UseTab: Never
+
+# 2. Linux 风格的大括号位置
+#    – 函数左 brace 换行
+#    – 控制语句左 brace 不换行，else 与右 brace 同行
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: false
+
+# 3. 单行简短函数允许留在头文件中（keep-one-line-statements）
+; AllowShortFunctionsOnASingleLine: Inline
+
+# 4. 强制单行语句加括号（对应 add-brackets）
+AddBraces: true
+
+ContinuationIndentWidth: 4
+
+# 7. 控制关键字后加空格（pad-header）
+SpaceBeforeParens: ControlStatements
+
+# 9. 注释从第 1 列开始时不缩进（indent-col1-comments）
+IndentPPDirectives: None
+
+# 10. 禁用自动换行，保持原有断行（astyle 无列宽限制）
+ColumnLimit: 0
+
+# 12. 包含块内空行、最大连续空行与 astyle 默认一致
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+PointerAlignment: Right          # & 靠近变量名（Linux 风格）
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignAfterOpenBracket: Align     # 参数换行后与上一行左括号对齐
