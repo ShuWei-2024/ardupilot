@@ -151,19 +151,19 @@ void AP_CompanionComputer::parse_flight_control_data()
 {
     _received_packet =
         PacketBuilder::deserialize<CompanionReceivePacket>(_rx_buffer.data());
-    _parsed_packet = {
-        .ctrl_mode = _received_packet.ctrl_mode,
-        .x_axis_err = _received_packet.x_axis_err,
-        .y_axis_err = _received_packet.y_axis_err,
-        .z_axis_err = _received_packet.z_axis_err,
-        .max_velocity = _received_packet.max_velocity / 100.0f,
-        .desired_yaw = _received_packet.desired_yaw / 100.0f,
-        .target_lon = _received_packet.target_lon / 1e7,
-        .target_lat = _received_packet.target_lat / 1e7,
-        .target_alt = _received_packet.target_alt / 100.0f,
-        .target_yaw = _received_packet.target_yaw / 100.0f,
-        .target_velocity = _received_packet.target_velocity / 100.0f,
-        .yaw_max_rate = _received_packet.yaw_max_rate / 1000.0f};
+    // _parsed_packet = {
+    //     .ctrl_mode = _received_packet.ctrl_mode,
+    //     .x_axis_err = _received_packet.x_axis_err,
+    //     .y_axis_err = _received_packet.y_axis_err,
+    //     .z_axis_err = _received_packet.z_axis_err,
+    //     .max_velocity = _received_packet.max_velocity / 100.0f,
+    //     .desired_yaw = _received_packet.desired_yaw / 100.0f,
+    //     .target_lon = _received_packet.target_lon / 1e7,
+    //     .target_lat = _received_packet.target_lat / 1e7,
+    //     .target_alt = _received_packet.target_alt / 100.0f,
+    //     .target_yaw = _received_packet.target_yaw / 100.0f,
+    //     .target_velocity = _received_packet.target_velocity / 100.0f,
+    //     .yaw_max_rate = _received_packet.yaw_max_rate / 1000.0f};
 
 #if HAL_LOGGING_ENABLED
     Log_C2HC();
@@ -232,7 +232,7 @@ void AP_CompanionComputer::send_data()
     pkt.data_length = sizeof(CompanionSendPacket) - 7; // 2+2+1+2head 2 byte,  commond 2 byte, checksum 2byte, end sign 2 byte
     
     // get flight control mode
-    pkt.ctrl_mode = _parsed_packet.ctrl_mode;
+    pkt.ctrl_mode = _received_packet.ctrl_mode;
 
     //get battery percentage
     const AP_BattMonitor &battery = AP::battery();
@@ -322,18 +322,18 @@ void AP_CompanionComputer::Log_C2HC() const
     const struct log_c2hc pkt = {
         LOG_PACKET_HEADER_INIT(LOG_C2HC_MSG),
         time_us : AP_HAL::micros64(),
-        ctrl_mode : _parsed_packet.ctrl_mode,
-        x_axis_err : _parsed_packet.x_axis_err,
-        y_axis_err : _parsed_packet.y_axis_err,
-        z_axis_err : _parsed_packet.z_axis_err,
-        max_velocity : _parsed_packet.max_velocity,
-        desired_yaw : _parsed_packet.desired_yaw,
-        target_lon : _parsed_packet.target_lon,
-        target_lat : _parsed_packet.target_lat,
-        target_alt : _parsed_packet.target_alt,
-        target_yaw : _parsed_packet.target_yaw,
-        target_velocity : _parsed_packet.target_velocity,
-        yaw_max_rate : _parsed_packet.yaw_max_rate,
+        ctrl_mode : _received_packet.ctrl_mode,
+        x_axis_err : _received_packet.x_axis_err,
+        y_axis_err : _received_packet.y_axis_err,
+        z_axis_err : _received_packet.z_axis_err,
+        max_velocity : _received_packet.max_velocity / 100.0f,
+        desired_yaw : _received_packet.desired_yaw / 100.0f,
+        target_lon : _received_packet.target_lon / 1e7,
+        target_lat : _received_packet.target_lat / 1e7,
+        target_alt : _received_packet.target_alt / 100.0f,
+        target_yaw : _received_packet.target_yaw / 100.0f,
+        target_velocity : _received_packet.target_velocity / 100.0f,
+        yaw_max_rate : _received_packet.yaw_max_rate / 1000.0f,
     };
     AP::logger().WriteBlock(&pkt, sizeof(pkt));
     
