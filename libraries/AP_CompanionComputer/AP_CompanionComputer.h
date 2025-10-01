@@ -20,6 +20,9 @@ public:
     void update();
     void send_data();
     
+    bool is_new_mode() { return _new_mode_flag; }
+    void clear_new_mode_flag() { _new_mode_flag = false; }
+
     AP_Int8 enabled() { return _enable; };
     static const struct AP_Param::GroupInfo var_info[];
     // const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
@@ -48,7 +51,7 @@ private:
     std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
     uint8_t _rx_count;
     uint32_t _rx_start_time;
-    uint32_t _last_received_ms;
+    // uint32_t _last_received_ms;
     uint32_t _last_sent_ms;
 
     void process_received_data(uint8_t oneByte);
@@ -60,11 +63,12 @@ private:
     AP_HAL::UARTDriver *_uart;
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
     bool validate_packet() const;
-    int print_count = 0;
     uint32_t _log_c2hc_bit = -1;
     void Log_C2HC() const;
 
     uint8_t _cmd_source;
     uint8_t _cmd_type;
     uint8_t _data_len;
+    uint8_t _last_ctrl_mode;
+    bool _new_mode_flag = false;
 };

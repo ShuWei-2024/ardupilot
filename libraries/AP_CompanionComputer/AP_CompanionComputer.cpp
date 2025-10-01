@@ -168,6 +168,40 @@ void AP_CompanionComputer::parse_flight_control_data()
 #if HAL_LOGGING_ENABLED
     Log_C2HC();
 #endif
+    switch (_received_packet.ctrl_mode) {
+    case 0x00: // 待命
+        if(_last_ctrl_mode != 0x00){
+            // 退出定点跟随模式，返回上一个模式（在Copter.cpp中处理）
+            _last_ctrl_mode = 0x00;
+            _new_mode_flag = true;
+        }
+        // 无动作
+        break;
+    case 0x01: // 定点跟随
+        // 进入定点跟随模式 （在Copter.cpp中处理）
+        if(_last_ctrl_mode != 0x01){
+            _last_ctrl_mode = 0x01;
+            _new_mode_flag = true;
+        }
+        break;
+    case 0x02: // 定点悬停
+        // 进入定点悬停模式
+        if(_last_ctrl_mode != 0x02){
+            _last_ctrl_mode = 0x02;
+            _new_mode_flag = true;
+        }
+        break;
+    case 0x03: // 定点降落
+        // 进入定点降落模式
+        if(_last_ctrl_mode != 0x03){
+            _last_ctrl_mode = 0x03;
+            _new_mode_flag = true;
+        }
+        break;
+    default:
+        // 未知控制模式
+        break;
+    }
     
 }
 

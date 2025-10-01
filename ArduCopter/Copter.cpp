@@ -276,7 +276,11 @@ void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
 
 void Copter::receive_companion_computer()
 {
-    companion_computer.update();   
+    companion_computer.update();
+    if(companion_computer.is_new_mode()){
+        set_mode(COPTER_MODE_FOLLOW_EXT, ModeReason::GCS_COMMAND);
+        companion_computer.clear_new_mode_flag();
+    }
 }
 
 // SCHED_TASK实现
