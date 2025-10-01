@@ -209,6 +209,7 @@ public:
     friend class ModeFlip;
     friend class ModeFlowHold;
     friend class ModeFollow;
+    friend class ModeFollowExt;
     friend class ModeGuided;
     friend class ModeLand;
     friend class ModeLoiter;
@@ -1027,6 +1028,9 @@ private:
 #endif
 #if MODE_FOLLOW_ENABLED
     ModeFollow mode_follow;
+#endif
+#if MODE_FOLLOW_EXT_ENABLED
+    ModeFollowExt mode_follow_ext;
 #endif
 #if MODE_GUIDED_ENABLED
     ModeGuided mode_guided;
