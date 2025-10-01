@@ -179,6 +179,12 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
             break;
 #endif
 
+#if MODE_FOLLOW_EXT_ENABLED
+        case Mode::Number::FOLLOW_EXT:
+            ret = &mode_follow_ext;
+            break;
+#endif
+
         default:
             break;
     }
