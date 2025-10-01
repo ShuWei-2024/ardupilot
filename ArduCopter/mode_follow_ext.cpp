@@ -27,8 +27,6 @@ bool ModeFollowExt::init(const bool ignore_checks)
 // 主循环
 void ModeFollowExt::run()
 {
-    // 1. 更新外部数据（你已有的）
-    copter.companion_computer.update();
     // log output at 10hz
     uint32_t now = AP_HAL::millis();
     bool log_request = false;
