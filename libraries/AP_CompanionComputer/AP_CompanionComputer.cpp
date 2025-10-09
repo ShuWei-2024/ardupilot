@@ -29,8 +29,9 @@ AP_CompanionComputer::AP_CompanionComputer() :
     _uart(nullptr),
     _log_c2hc_bit(-1) 
     {
-    AP_Param::setup_object_defaults(this, var_info);
-    _rx_buffer.fill(0);
+        _singleton = this;
+        AP_Param::setup_object_defaults(this, var_info);
+        _rx_buffer.fill(0);
 }
 
 void AP_CompanionComputer::init() 
@@ -272,7 +273,7 @@ void AP_CompanionComputer::send_data()
     const AP_BattMonitor &battery = AP::battery();
     uint8_t percentage; 
     if (battery.has_cell_voltages(1)) {            
-        if (AP::battery().capacity_remaining_pct(percentage, 1)){
+        if (battery.capacity_remaining_pct(percentage, 1)){
             pkt.battery_percent = percentage;
         }else{
             pkt.battery_percent = 0;
@@ -373,3 +374,15 @@ void AP_CompanionComputer::Log_C2HC() const
     
 }
 #endif // HAL_LOGGING_ENABLED
+
+// singleton instance
+AP_CompanionComputer *AP_CompanionComputer::_singleton;
+
+namespace AP {
+
+AP_CompanionComputer &companioncomputer()
+{
+    return *AP_CompanionComputer::get_singleton();
+}
+
+}

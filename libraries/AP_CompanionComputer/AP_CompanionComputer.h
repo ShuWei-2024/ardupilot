@@ -15,6 +15,8 @@ public:
     /* Do not allow copies */
     AP_CompanionComputer(const AP_CompanionComputer &other) = delete;
     AP_CompanionComputer &operator=(const AP_CompanionComputer&) = delete;
+    // get singleton instance 
+    static AP_CompanionComputer *get_singleton(){return _singleton;}
 
     void init();
     void update();
@@ -30,45 +32,49 @@ public:
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
-    constexpr static uint32_t PACKET_TIMEOUT_MS = 200;
-    AP_Int8 _enable;
-    AP_Int8 _port_index;        // the index of instance for companion computer
+  static AP_CompanionComputer *_singleton;
+  constexpr static uint32_t PACKET_TIMEOUT_MS = 200;
+  AP_Int8 _enable;
+  AP_Int8 _port_index; // the index of instance for companion computer
 
-    // receive state machine
-    enum class RxState
-    {
-        WAITING_HEADER1,
-        WAITING_HEADER2,
-        WAITING_SOURCE,
-        WAITING_TYPE,
-        WAITING_LENGTH,
-        RECEIVING_DATA
-    } _rx_state;
+  // receive state machine
+  enum class RxState {
+      WAITING_HEADER1,
+      WAITING_HEADER2,
+      WAITING_SOURCE,
+      WAITING_TYPE,
+      WAITING_LENGTH,
+      RECEIVING_DATA
+  } _rx_state;
 
-    // received buff
-    CompanionReceivePacket _received_packet;
-    // ParsedPacket _parsed_packet;
-    std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
-    uint8_t _rx_count;
-    uint32_t _rx_start_time;
-    // uint32_t _last_received_ms;
-    uint32_t _last_sent_ms;
+  // received buff
+  CompanionReceivePacket _received_packet;
+  // ParsedPacket _parsed_packet;
+  std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
+  uint8_t _rx_count;
+  uint32_t _rx_start_time;
+  // uint32_t _last_received_ms;
+  uint32_t _last_sent_ms;
 
-    void process_received_data(uint8_t oneByte);
-    void parse_flight_control_data();
-    void parse_parameter_data();
-    void parse_system_command();
-    void send_response(uint8_t data, uint8_t status);
+  void process_received_data(uint8_t oneByte);
+  void parse_flight_control_data();
+  void parse_parameter_data();
+  void parse_system_command();
+  void send_response(uint8_t data, uint8_t status);
 
-    AP_HAL::UARTDriver *_uart;
-    uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
-    bool validate_packet() const;
-    uint32_t _log_c2hc_bit = -1;
-    void Log_C2HC() const;
+  AP_HAL::UARTDriver *_uart;
+  uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
+  bool validate_packet() const;
+  uint32_t _log_c2hc_bit = -1;
+  void Log_C2HC() const;
 
-    uint8_t _cmd_source;
-    uint8_t _cmd_type;
-    uint8_t _data_len;
-    uint8_t _last_ctrl_mode;
-    bool _new_mode_flag = false;
+  uint8_t _cmd_source;
+  uint8_t _cmd_type;
+  uint8_t _data_len;
+  uint8_t _last_ctrl_mode;
+  bool _new_mode_flag = false;
+};
+
+namespace AP {
+  AP_CompanionComputer &companioncomputer();
 };
