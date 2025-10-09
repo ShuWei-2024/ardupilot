@@ -27,6 +27,11 @@ bool ModeFollowExt::init(const bool ignore_checks)
 // 主循环
 void ModeFollowExt::run()
 {
+    // // 基础安全处理
+    // if (is_disarmed_or_landed()) {
+    //     make_safe_ground_handling();
+    //     return;
+    // }
     // log output at 10hz
     uint32_t now = AP_HAL::millis();
     bool log_request = false;
@@ -34,17 +39,14 @@ void ModeFollowExt::run()
         log_request = true;
         last_log_ms = now;
     }
-    Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NEU, cm/s
+    motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+    // const auto &cc = AP::companioncomputer();
+    // int a = cc.get_received_packet().ctrl_mode;
+    Vector3f desired_velocity_neu_cms(100.0f, 0.0f, 0.0f); // NEU, cm/s
     // re-use guided mode's velocity controller (takes NEU)
     ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
     ModeGuided::run();
     gcs().send_text(MAV_SEVERITY_DEBUG, "run FOLLOW_EXT");
-    // // 基础安全处理
-    // if (is_disarmed_or_landed()) {
-    //     make_safe_ground_handling();
-    //     return;
-    // }
-    // motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
     // const CompanionReceivePacket &pkt = copter.companion_computer.get_received_packet();
     // // 2. 构造目标 Location
     // Location target_loc;
