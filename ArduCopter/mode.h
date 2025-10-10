@@ -1901,11 +1901,19 @@ class ModeFollowExt : public ModeGuided {
     bool allows_arming(AP_Arming::Method method) const override { return false; }
     bool is_autopilot() const override { return true; }
 
+    static const struct AP_Param::GroupInfo var_info[];
+
   protected:
     const char *name() const override { return "FOLLOW_EXT"; }
     const char *name4() const override { return "FOLE"; }
     
     uint32_t last_log_ms;   // system time of last time desired velocity was logging
+  private:
+    AP_Int8 _followext_enabled;
+    AP_Float _kp_param;
+    AP_Float _ki_param;
+    AP_Float _kd_param;
+    AP_Float _imax_param;
 };
 #endif
 

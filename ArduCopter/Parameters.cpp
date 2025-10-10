@@ -293,7 +293,7 @@ const AP_Param::Info Copter::var_info[] = {
     // @Param: INITIAL_MODE
     // @DisplayName: Initial flight mode
     // @Description: This selects the mode to start in on boot. This is useful for when you want to start in AUTO mode on boot without a receiver.
-    // @Values: 0:Stabilize,1:Acro,2:AltHold,3:Auto,4:Guided,5:Loiter,6:RTL,7:Circle,9:Land,11:Drift,13:Sport,14:Flip,15:AutoTune,16:PosHold,17:Brake,18:Throw,19:Avoid_ADSB,20:Guided_NoGPS,21:Smart_RTL,22:FlowHold,23:Follow,24:ZigZag,25:SystemID,26:Heli_Autorotate
+    // @Values: 0:Stabilize,1:Acro,2:AltHold,3:Auto,4:Guided,5:Loiter,6:RTL,7:Circle,9:Land,11:Drift,13:Sport,14:Flip,15:AutoTune,16:PosHold,17:Brake,18:Throw,19:Avoid_ADSB,20:Guided_NoGPS,21:Smart_RTL,22:FlowHold,23:Follow,24:ZigZag,25:SystemID,26:Heli_Autorotate,29:Follow_Ext
     // @User: Advanced
     GSCALAR(initial_mode,        "INITIAL_MODE",     (uint8_t)Mode::Number::STABILIZE),
 
@@ -1165,8 +1165,13 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // ID 62 is reserved for the SHOW_... parameters from the Skybrush fork at
     // https://github.com/skybrush-io/ardupilot
 
-    AP_GROUPEND
-};
+#if MODE_FOLLOW_EXT_ENABLED
+    // @Group: FOLE_
+    // @Path: mode_follow_ext.cpp
+    AP_SUBGROUPPTR(mode_follow_ext_ptr, "FOLE_", 63, ParametersG2, ModeFollowExt),
+#endif
+
+    AP_GROUPEND};
 
 /*
   extension to g2 parameters
@@ -1285,7 +1290,9 @@ ParametersG2::ParametersG2(void)
 #if MODE_ZIGZAG_ENABLED
     ,mode_zigzag_ptr(&copter.mode_zigzag)
 #endif
-
+#if MODE_FOLLOW_EXT_ENABLED
+    ,mode_follow_ext_ptr(&copter.mode_follow_ext)
+#endif
 #if MODE_ACRO_ENABLED || MODE_SPORT_ENABLED
     ,command_model_acro_rp(ACRO_RP_RATE_DEFAULT, ACRO_RP_EXPO_DEFAULT, 0.0f)
 #endif
