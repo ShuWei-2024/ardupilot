@@ -228,6 +228,7 @@ bool Copter::gcs_mode_enabled(const Mode::Number mode_num)
         (uint8_t)Mode::Number::SMART_RTL,
         (uint8_t)Mode::Number::FLOWHOLD,
         (uint8_t)Mode::Number::FOLLOW,
+        (uint8_t)Mode::Number::FOLLOW_EXT,
         (uint8_t)Mode::Number::ZIGZAG,
         (uint8_t)Mode::Number::SYSTEMID,
         (uint8_t)Mode::Number::AUTOROTATE,

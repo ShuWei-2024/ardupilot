@@ -1,4 +1,5 @@
 #include "Copter.h"
+#include <AP_Param/AP_Param.h>
 
 #if MODE_FOLLOW_EXT_ENABLED
 
@@ -7,7 +8,36 @@
  * 数据源：ParsedPacket（lat/lon/alt/velocity/yaw）
  * 不再使用 g2.follow.get_target_dist_and_vel_ned()
  */
+const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
+    // @Param: AUTO_ENABLE
+    // @DisplayName: FollowExt auto enable/disable
+    // @Description: Allows you to enable (1) or disable (0) FollowExt auto feature
+    // @Values: 0:Disabled,1:Enabled
+    // @User: Advanced
+    AP_GROUPINFO_FLAGS("AUTO_ENABLE", 1, ModeFollowExt, _followext_enabled, 1, AP_PARAM_FLAG_ENABLE),
+    //  @Param: FOLLOW_KP
+    //  @DisplayName: Follow mode P gain
+    //  @Description: Proportional gain for position error in follow mode
+    //  @User: Advanced
+    AP_GROUPINFO("FOLLOW_KP", 2, ModeFollowExt, _kp_param, 5.0),
+    // @Param: FOLLOW_KI
+    // @DisplayName: Follow mode I gain
+    // @Description: Integral gain for position error in follow mode
+    // @User: Advanced
+    AP_GROUPINFO("FOLLOW_KI", 3, ModeFollowExt, _ki_param, 0.0f),
+    // @Param: FOLLOW_KD
+    // @DisplayName: Follow mode D gain
+    // @Description: Derivative gain for position error in follow mode
+    // @User: Advanced
+    AP_GROUPINFO("FOLLOW_KD", 4, ModeFollowExt, _kd_param, 0.0f),
+    // @Param: FOLLOW_IMAX
+    // @DisplayName: Follow mode I max
+    // @Description: Maximum integral term for position error in follow mode
+    // @User: Advanced
+    AP_GROUPINFO("FOLLOW_IMAX", 5, ModeFollowExt, _imax_param, 0.0f),
 
+    AP_GROUPEND
+};
 // 工具：把经纬度差转换成 cm（水平面）
 // static Vector2f diff_location_cm(const Location &loc1, const Location &loc2)
 // {
@@ -20,6 +50,7 @@
 bool ModeFollowExt::init(const bool ignore_checks)
 {
     // return ModeGuided::init(ignore_checks);
+    AP_Param::setup_object_defaults(this, var_info);
     gcs().send_text(MAV_SEVERITY_DEBUG, "entry FOLLOW_EXT");
     return true;
 }
