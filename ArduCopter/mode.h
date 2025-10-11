@@ -1910,10 +1910,11 @@ class ModeFollowExt : public ModeGuided {
     uint32_t last_log_ms;   // system time of last time desired velocity was logging
   private:
     AP_Int8 _followext_enabled;
-    AP_Float _kp_param;
-    AP_Float _ki_param;
-    AP_Float _kd_param;
-    AP_Float _imax_param;
+    AP_Float _kp_yaw;
+    AP_Float _kp_thr;
+    AP_Float _kd_yaw;
+    AP_Float _kd_thr;
+    AP_Float _pitch_fixed;
 };
 #endif
 
