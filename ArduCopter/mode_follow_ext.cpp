@@ -15,28 +15,33 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     // @Values: 0:Disabled,1:Enabled
     // @User: Advanced
     AP_GROUPINFO_FLAGS("AUTO_ENABLE", 1, ModeFollowExt, _followext_enabled, 1, AP_PARAM_FLAG_ENABLE),
-    //  @Param: FOLLOW_KP
-    //  @DisplayName: Follow mode P gain
-    //  @Description: Proportional gain for position error in follow mode
+    //  @Param: FOLE_KP_YAW
+    //  @DisplayName: Follow mode P gain on yaw
+    //  @Description: Proportional gain in follow mode
     //  @User: Advanced
-    AP_GROUPINFO("FOLLOW_KP", 2, ModeFollowExt, _kp_param, 5.0),
-    // @Param: FOLLOW_KI
-    // @DisplayName: Follow mode I gain
-    // @Description: Integral gain for position error in follow mode
+    AP_GROUPINFO("KP_YAW", 2, ModeFollowExt, _kp_yaw, 2.0f),
+    // @Param: FOLE_KP_THR
+    // @DisplayName: Follow mode I gain on throttle
+    // @Description: Proportional gain in follow mode
     // @User: Advanced
-    AP_GROUPINFO("FOLLOW_KI", 3, ModeFollowExt, _ki_param, 0.0f),
-    // @Param: FOLLOW_KD
-    // @DisplayName: Follow mode D gain
-    // @Description: Derivative gain for position error in follow mode
+    AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 2.0f),
+    // @Param: FOLE_KD_YAW
+    // @DisplayName: Follow mode D gain on yaw
+    // @Description: Derivative gain in follow mode
     // @User: Advanced
-    AP_GROUPINFO("FOLLOW_KD", 4, ModeFollowExt, _kd_param, 0.0f),
-    // @Param: FOLLOW_IMAX
-    // @DisplayName: Follow mode I max
-    // @Description: Maximum integral term for position error in follow mode
+    AP_GROUPINFO("KD_YAW", 4, ModeFollowExt, _kd_yaw, 0.0f),
+    // @Param: FOLE_KD_THR
+    // @DisplayName: Follow mode D gain on throttle
+    // @Description: Derivative gain in follow mode
     // @User: Advanced
-    AP_GROUPINFO("FOLLOW_IMAX", 5, ModeFollowExt, _imax_param, 0.0f),
+    AP_GROUPINFO("KD_THR", 5, ModeFollowExt, _kd_thr, 0.0f),
+    //@Param: FOLE_Pitch
+    //@DisplayName: Follow mode pitch angle
+    //@Description: Fixed pitch angle in follow mode (degrees)
+    //@User: Advanced
+    AP_GROUPINFO("PITCH", 6, ModeFollowExt, _pitch_fixed, 25.0f),
 
-    AP_GROUPEND
+AP_GROUPEND
 };
 // 工具：把经纬度差转换成 cm（水平面）
 // static Vector2f diff_location_cm(const Location &loc1, const Location &loc2)
@@ -55,80 +60,82 @@ bool ModeFollowExt::init(const bool ignore_checks)
     return true;
 }
 
-// 主循环
 void ModeFollowExt::run()
 {
-    // // 基础安全处理
+    /* 1. 基础安全处理（可选，需要就打开） */
     // if (is_disarmed_or_landed()) {
     //     make_safe_ground_handling();
     //     return;
     // }
-    // log output at 10hz
-    uint32_t now = AP_HAL::millis();
-    bool log_request = false;
-    if ((now - last_log_ms >= 100) || (last_log_ms == 0)) {
-        log_request = true;
+
+    /* 2. 10 Hz 日志标记 */
+    const uint32_t now = AP_HAL::millis();
+    const bool log_request = (now - last_log_ms >= 100) || (last_log_ms == 0);
+    if (log_request)
         last_log_ms = now;
-    }
+
+    /* 3. 电机解锁状态 */
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
-    // const auto &cc = AP::companioncomputer();
-    // int a = cc.get_received_packet().ctrl_mode;
-    Vector3f desired_velocity_neu_cms(100.0f, 0.0f, 0.0f); // NEU, cm/s
-    // re-use guided mode's velocity controller (takes NEU)
-    ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
+
+    /* 4. 取 CompanionComputer 单例，并把最新包拷出来 */
+    const auto &cc = AP::companioncomputer();
+    const CompanionReceivePacket pkt = cc.get_received_packet(); // 结构体拷贝，线程安全
+
+    /* 5. 根据 ctrl_mode 决定控制方式 */
+    switch (pkt.ctrl_mode) {
+    case 1: { // 角度控制模式
+        /* 1. 误差量（机体坐标，m） */
+        // float x_err = pkt.x_axis_err; // 前，用不到
+        float y_err = pkt.y_axis_err; // 右
+        float z_err = pkt.z_axis_err; // 下
+
+        /* 2. 控制参数 */
+        const float pitch_fixed = 25.0f * DEG_TO_RAD; // 固定 25°
+
+        /* 3. 滚转=0，俯仰=固定，偏航=当前航向 */
+        float roll_rad = 0.0f;
+        float pitch_rad = pitch_fixed;
+        float yaw_rad = copter.ahrs.get_yaw(); // 保持当前航向作为基准
+
+        /* 4. 根据 y_err 计算偏航角速率（rad/s，机体轴）*/
+        float yaw_rate_cmd = -_kp_yaw * y_err; // 负号：y>0（目标在右侧）→ 需左转
+
+        /* 5. 根据 z_err 计算推力补偿（0~1）*/
+        float thrust_bas = 0.5f;                        // 悬停基准推力
+        float thrust_cmd = thrust_bas - _kp_thr * z_err; // z>0（目标在下）→ 需加大推力
+        thrust_cmd = constrain_float(thrust_cmd, 0.2f, 0.8f);
+
+        /* 6. 组装角速度（机体轴，rad/s）*/
+        Vector3f ang_vel_body(0.0f, 0.0f, yaw_rate_cmd); // 滚转、俯仰速率=0
+
+        /* 7. 生成姿态四元数 */
+        Quaternion att_quat;
+        att_quat.from_euler(roll_rad, pitch_rad, yaw_rad);
+
+        /* 8. 调用 guided 角度接口 */
+        ModeGuided::set_angle(att_quat, ang_vel_body, thrust_cmd, true); // use_thrust=true
+
+        break;
+    }
+    case 3: { // 位置控制模式
+        /* 直接把 pkt 里的 lat/lon/alt 喂给 set_destination */
+        Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABSOLUTE);
+        // Location target_loc(303051391, 1201586749, 2500, Location::AltFrame::ABSOLUTE);
+        ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
+        break;
+    }
+    default:
+        /* 未定义模式，可以原地悬停或什么都不做 */
+        Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NEU, cm/s
+        ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
+        break;
+    }
+
+    /* 6. 让 guided 的姿态环继续跑 */
     ModeGuided::run();
-    gcs().send_text(MAV_SEVERITY_DEBUG, "run FOLLOW_EXT");
-    // const CompanionReceivePacket &pkt = copter.companion_computer.get_received_packet();
-    // // 2. 构造目标 Location
-    // Location target_loc;
-    // target_loc.lat = pkt.target_lat * 1.0e7; // 度 -> 1e7
-    // target_loc.lng = pkt.target_lon * 1.0e7;
-    // target_loc.alt = pkt.target_alt * 100.0f; // m -> cm（相对原点）
 
-    // // 3. 计算相对向量（NEU，cm）
-    // Vector2f offset_ne_cm = diff_location_cm(copter.current_loc, target_loc);
-    // float offset_u_cm = (target_loc.alt - copter.current_loc.alt); // cm
-
-    // Vector3f dist_vec_offs_neu(offset_ne_cm.x, offset_ne_cm.y, offset_u_cm);
-
-    // // 4. 目标速度（NED -> NEU，cm/s）
-    // Vector3f vel_target_neu_cms(pkt.target_velocity * cosf(radians(pkt.target_yaw)) * 100.0f,
-    //                             pkt.target_velocity * sinf(radians(pkt.target_yaw)) * 100.0f,
-    //                             0.0f); // 若以后有 vz 再补充
-
-    // // 5. P 控制器：位置误差 -> 期望速度
-    // const float kp = 1.0f; // 可调，也可放参数 FOLL_POS_P
-    // Vector3f desired_velocity_neu_cms = dist_vec_offs_neu * kp;
-
-    // // 6. 叠加目标速度
-    // desired_velocity_neu_cms += vel_target_neu_cms;
-
-    // // 7. 水平/垂直限速（复用原逻辑）
-    // Vector2f des_xy(desired_velocity_neu_cms.x, desired_velocity_neu_cms.y);
-    // des_xy.limit_length(pos_control->get_max_speed_xy_cms());
-    // desired_velocity_neu_cms.x = des_xy.x;
-    // desired_velocity_neu_cms.y = des_xy.y;
-
-    // desired_velocity_neu_cms.z = constrain_float(
-    //     desired_velocity_neu_cms.z, -fabsf(pos_control->get_max_speed_down_cms()), pos_control->get_max_speed_up_cms());
-
-    // // 8. 避障限速（可选，保留）
-    // copter.avoid.adjust_velocity(desired_velocity_neu_cms, pos_control->get_pos_xy_p().kP().get(),
-    //                              pos_control->get_max_accel_xy_cmss(), pos_control->get_pos_z_p().kP().get(),
-    //                              pos_control->get_max_accel_z_cmss(), G_Dt);
-
-    // // 9. 航向：直接采用包里的 desired_yaw
-    // bool use_yaw = true;
-    // float yaw_cd = pkt.desired_yaw * 100.0f; // deg -> centideg
-
-    // // 10. 日志输出 10 Hz
-    // uint32_t now = AP_HAL::millis();
-    // bool log_request = (now - last_log_ms >= 100) || (last_log_ms == 0);
-    // last_log_ms = now;
-
-    // // 11. 交给 Guided 底层
-    // ModeGuided::set_velocity(desired_velocity_neu_cms, use_yaw, yaw_cd, false, 0.0f, false, log_request);
-    // ModeGuided::run();
+    /* 7. 调试用，可删 */
+    gcs().send_text(MAV_SEVERITY_DEBUG, "FOLLOW_EXT run: mode=%d", (int)pkt.ctrl_mode);
 }
 
 #endif // MODE_FOLLOW_ENABLED
