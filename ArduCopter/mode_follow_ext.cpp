@@ -41,8 +41,7 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     //@User: Advanced
     AP_GROUPINFO("PITCH", 6, ModeFollowExt, _pitch_fixed, 25.0f),
 
-AP_GROUPEND
-};
+    AP_GROUPEND};
 // 工具：把经纬度差转换成 cm（水平面）
 // static Vector2f diff_location_cm(const Location &loc1, const Location &loc2)
 // {
@@ -118,24 +117,24 @@ void ModeFollowExt::run()
         break;
     }
     case 3: { // 位置控制模式
-        /* 直接把 pkt 里的 lat/lon/alt 喂给 set_destination */
         Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABSOLUTE);
+        // gcs().send_text(MAV_SEVERITY_DEBUG, "FOLLOW_EXT target: lat=%d lon=%d alt=%d", pkt.target_lat, pkt.target_lon, pkt.target_alt); //debug
         // Location target_loc(303051391, 1201586749, 2500, Location::AltFrame::ABSOLUTE);
+        
+        pos_control->set_max_speed_accel_xy(pkt.max_velocity, 200.0f); // cm/s, cm/s^2
         ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
+
         break;
     }
     default:
         /* 未定义模式，可以原地悬停或什么都不做 */
-        Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NEU, cm/s
+        Vector3f desired_velocity_neu_cms(1500.0f, 0.0f, 0.0f); // NEU, cm/s
         ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
         break;
     }
 
     /* 6. 让 guided 的姿态环继续跑 */
     ModeGuided::run();
-
-    /* 7. 调试用，可删 */
-    gcs().send_text(MAV_SEVERITY_DEBUG, "FOLLOW_EXT run: mode=%d", (int)pkt.ctrl_mode);
 }
 
 #endif // MODE_FOLLOW_ENABLED
