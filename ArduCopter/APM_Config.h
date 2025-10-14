@@ -6,11 +6,11 @@
 //#define AUTOTUNE_ENABLED      0            // disable the auto tune functionality to save 7k of flash
 //#define NAV_GUIDED            0            // disable external navigation computer ability to control vehicle through MAV_CMD_NAV_GUIDED mission commands
 //#define MODE_ACRO_ENABLED     0            // disable acrobatic mode support
-//#define MODE_AUTO_ENABLED     0            // disable auto mode support
-//#define MODE_BRAKE_ENABLED    0            // disable brake mode support
-//#define MODE_CIRCLE_ENABLED   0            // disable circle mode support
-//#define MODE_DRIFT_ENABLED    0            // disable drift mode support
-//#define MODE_FLIP_ENABLED     0            // disable flip mode support
+// #define MODE_AUTO_ENABLED     0            // disable auto mode support
+#define MODE_BRAKE_ENABLED    0            // disable brake mode support
+// #define MODE_CIRCLE_ENABLED   0            // disable circle mode support
+#define MODE_DRIFT_ENABLED    0            // disable drift mode support
+#define MODE_FLIP_ENABLED     0            // disable flip mode support
 //#define MODE_FOLLOW_ENABLED   0            // disable follow mode support
 //#define MODE_GUIDED_ENABLED   0            // disable guided mode support
 //#define MODE_GUIDED_NOGPS_ENABLED   0      // disable guided/nogps mode support
@@ -18,10 +18,10 @@
 //#define MODE_POSHOLD_ENABLED  0            // disable poshold mode support
 //#define MODE_RTL_ENABLED      0            // disable rtl mode support
 //#define MODE_SMARTRTL_ENABLED 0            // disable smartrtl mode support
-//#define MODE_SPORT_ENABLED    0            // disable sport mode support
-//#define MODE_SYSTEMID_ENABLED 0            // disable system ID mode support
-//#define MODE_THROW_ENABLED    0            // disable throw mode support
-//#define MODE_ZIGZAG_ENABLED   0            // disable zigzag mode support
+#define MODE_SPORT_ENABLED    0            // disable sport mode support
+#define MODE_SYSTEMID_ENABLED 0            // disable system ID mode support
+#define MODE_THROW_ENABLED    0            // disable throw mode support
+#define MODE_ZIGZAG_ENABLED   0            // disable zigzag mode support
 //#define OSD_ENABLED           0            // disable on-screen-display support
 
 // features below are disabled by default on all boards

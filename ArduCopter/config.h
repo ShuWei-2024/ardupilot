@@ -167,11 +167,15 @@
 #ifndef MODE_FOLLOW_ENABLED
 #if AP_FOLLOW_ENABLED && AP_AVOIDANCE_ENABLED
 #define MODE_FOLLOW_ENABLED 1
-#define MODE_FOLLOW_EXT_ENABLED 1
 #else
 #define MODE_FOLLOW_ENABLED 0
-#define MODE_FOLLOW_EXT_ENABLED 0
 #endif
+#endif
+
+#ifndef MODE_FOLLOW_EXT_ENABLED
+#define MODE_FOLLOW_EXT_ENABLED 1
+#else
+#define MODE_FOLLOW_EXT_ENABLED 0
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

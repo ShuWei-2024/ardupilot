@@ -71,7 +71,7 @@ private:
   uint8_t _cmd_source;
   uint8_t _cmd_type;
   uint8_t _data_len;
-  uint8_t _last_ctrl_mode;
+  uint8_t _last_ctrl_mode = 9; // 初始值不等于任何模式
   bool _new_mode_flag = false;
 };
 
