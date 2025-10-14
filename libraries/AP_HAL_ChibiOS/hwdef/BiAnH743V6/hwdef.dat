@@ -77,7 +77,6 @@ PE11 LED0 OUTPUT LOW GPIO(90) # blue
 PE12 LED1 OUTPUT LOW GPIO(91) # green
 define HAL_GPIO_A_LED_PIN 91
 define HAL_GPIO_B_LED_PIN 90
-define HAL_GPIO_LED_OFF 1
 
 # order of UARTs (and USB)
 # SERIAL_NUM|SER0|SER1  |SER2  |SER3  |SER4 |SER5 |SER6  |SER7  |
@@ -160,7 +159,7 @@ SPIDEV dataflash      SPI3 DEVID3  FLASH1_CS       MODE3   104*MHZ 104*MHZ
 
 # enable logging to dataflash
 define HAL_LOGGING_DATAFLASH_ENABLED 1
-define HAL_LOGGING_DATAFLASH_DRIVER AP_Logger_W25N01GV
+define HAL_LOGGING_DATAFLASH_DRIVER AP_Logger_W25NXX
 
 
 # up to 3 IMUs (orientation needs to be determined)
@@ -187,5 +186,23 @@ define OSD_ENABLED 1
 define HAL_OSD_TYPE_DEFAULT 1
 ROMFS_WILDCARD libraries/AP_OSD/fonts/font*.bin
 
-
-
+# simplify
+define HAL_RUNCAM_ENABLED       0
+define HAL_GYROFFT_ENABLED      0
+define AP_VIDEOTX_ENABLED       0
+define AP_SMARTAUDIO_ENABLED    0
+define AP_TRAMP_ENABLED         0
+define HAL_WITH_DSP             0
+define AP_CAMERA_ENABLED        0
+define HAL_MOUNT_ENABLED        0
+define AP_NOTIFY_MAVLINK_LED_OVERRIDE_CONTROL 0
+define HAL_NMEA_OUTPUT_ENABLED  0
+define AP_SCRIPTING_ENABLED     0
+define AP_EXTERNAL_CONTROL_ENABLED 0
+define AP_AIS_ENABLED           0
+define HAL_GENERATOR_ENABLED    0
+define AP_OPENDRONEID_ENABLED   0
+define AP_GRIPPER_ENABLED       0
+define AP_FENCE_ENABLED         0
+define AP_WINCH_ENABLED         0
+define HAL_VISUALODOM_ENABLED   0

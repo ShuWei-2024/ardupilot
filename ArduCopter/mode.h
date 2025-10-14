@@ -1898,7 +1898,7 @@ class ModeFollowExt : public ModeGuided {
 
     bool requires_GPS() const override { return true; }
     bool has_manual_throttle() const override { return false; }
-    bool allows_arming(AP_Arming::Method method) const override { return false; }
+    bool allows_arming(AP_Arming::Method method) const override { return true; }
     bool is_autopilot() const override { return true; }
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -1909,6 +1909,8 @@ class ModeFollowExt : public ModeGuided {
     
     uint32_t last_log_ms;   // system time of last time desired velocity was logging
   private:
+    bool _takeoff_complete = false;
+    float _takeoff_target_alt_cm = 500.0f; // 5m
     AP_Int8 _followext_enabled;
     AP_Float _kp_yaw;
     AP_Float _kp_thr;
