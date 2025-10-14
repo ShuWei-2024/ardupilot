@@ -1911,6 +1911,7 @@ class ModeFollowExt : public ModeGuided {
   private:
     bool _takeoff_complete = false;
     float _takeoff_target_alt_cm = 500.0f; // 5m
+    uint8_t _last_max_velocity = 10;
     AP_Int8 _followext_enabled;
     AP_Float _kp_yaw;
     AP_Float _kp_thr;
