@@ -82,7 +82,7 @@ void ModeFollowExt::run()
 
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
-    case 1: { // 角度控制模式
+    case 1: { // 角度控制模式 TODO:根据要求的速度测个角度,set_velocity控制?
         /* 1. 误差量（机体坐标，m） */
         // float x_err = pkt.x_axis_err; // 前，用不到
         float y_err = pkt.y_axis_err; // 右
@@ -117,13 +117,28 @@ void ModeFollowExt::run()
         break;
     }
     case 3: { // 位置控制模式
-        Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABSOLUTE);
-        // gcs().send_text(MAV_SEVERITY_DEBUG, "FOLLOW_EXT target: lat=%d lon=%d alt=%d", pkt.target_lat, pkt.target_lon, pkt.target_alt); //debug
-        // Location target_loc(303051391, 1201586749, 2500, Location::AltFrame::ABSOLUTE);
-        
-        pos_control->set_max_speed_accel_xy(pkt.max_velocity, 200.0f); // cm/s, cm/s^2
+        Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
+        if(_last_max_velocity != pkt.max_velocity){
+            pos_control->set_max_speed_accel_xy(pkt.max_velocity, 200.0f); // cm/s, cm/s^2
+            _last_max_velocity = pkt.max_velocity;
+        }
         ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
 
+        break;
+    }
+    case 4: { // 起飞模式
+        //如果没有arm，先arm
+        if (!copter.arming.is_armed()) {
+            if (!copter.arming.arm(AP_Arming::Method::MAVLINK)) {
+                gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: Arm failed");
+            }
+        }else{
+            if(!_takeoff_complete){
+                do_user_takeoff(pkt.z_axis_err, false);
+                // do_user_takeoff_start(_takeoff_target_alt_cm);
+                _takeoff_complete = true;
+            }
+        }
         break;
     }
     default:

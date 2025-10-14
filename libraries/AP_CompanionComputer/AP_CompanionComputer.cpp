@@ -199,6 +199,13 @@ void AP_CompanionComputer::parse_flight_control_data()
             _new_mode_flag = true;
         }
         break;
+    case 0x04: // 起飞模式
+        // 进入起飞模式
+        if(_last_ctrl_mode != 0x04){
+            _last_ctrl_mode = 0x04;
+            _new_mode_flag = true;
+        }
+        break;
     default:
         // 未知控制模式
         break;
