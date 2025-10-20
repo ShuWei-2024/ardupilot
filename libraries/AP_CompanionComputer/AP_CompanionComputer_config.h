@@ -164,6 +164,15 @@ struct ParsedPacket
     float yaw_max_rate;
 };
 
+struct Mode1Param
+{
+    float _kp_yaw;
+    float _kp_thr;
+    float _kd_yaw;
+    float _kd_thr;
+    float _pitch_fixed;
+};
+
 // 数据包构建器
 class PacketBuilder {
 public:

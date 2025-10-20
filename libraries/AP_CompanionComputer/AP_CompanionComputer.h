@@ -23,12 +23,15 @@ public:
     void send_data();
     
     bool is_new_mode() { return _new_mode_flag; }
+    bool is_new_param() { return _new_param_flag; }
     void clear_new_mode_flag() { _new_mode_flag = false; }
+    void clear_new_param_flag() { _new_param_flag = false; }
 
     AP_Int8 enabled() { return _enable; };
     static const struct AP_Param::GroupInfo var_info[];
     // const ParsedPacket& get_parsed_packet() const { return _parsed_packet; }    //传出数据
     const CompanionReceivePacket& get_received_packet() const { return _received_packet; }    //传出数据
+    const Mode1Param& get_mode1_param() const { return _param; }
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
 private:
@@ -67,12 +70,14 @@ private:
   bool validate_packet() const;
   uint32_t _log_c2hc_bit = -1;
   void Log_C2HC() const;
+  Mode1Param _param;
 
   uint8_t _cmd_source;
   uint8_t _cmd_type;
   uint8_t _data_len;
   uint8_t _last_ctrl_mode = 9; // 初始值不等于任何模式
   bool _new_mode_flag = false;
+  bool _new_param_flag = false;
 };
 
 namespace AP {
