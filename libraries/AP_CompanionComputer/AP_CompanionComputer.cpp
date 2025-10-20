@@ -221,6 +221,7 @@ void AP_CompanionComputer::parse_parameter_data()
     // uint8_t param_index = buffer[3]; // 假设参数索引在第四个字节
     // float param_value = *reinterpret_cast<float*>(&buffer[4]); // 假设参数值从第五个字节开始
     // set_parameter(param_index, param_value);
+    _new_param_flag = true;
     send_response(0x01, 0x01);
 }
 

@@ -77,12 +77,21 @@ void ModeFollowExt::run()
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     /* 4. 取 CompanionComputer 单例，并把最新包拷出来 */
-    const auto &cc = AP::companioncomputer();
+    auto &cc = AP::companioncomputer();
     const CompanionReceivePacket pkt = cc.get_received_packet(); // 结构体拷贝，线程安全
 
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
     case 1: { // 角度控制模式 TODO:根据要求的速度测个角度,set_velocity控制?
+        if(cc.is_new_param()){
+            cc.clear_new_param_flag();
+            Mode1Param param = cc.get_mode1_param();
+            _kd_thr.set_and_save(param._kd_thr);
+            _kp_thr.set_and_save(param._kp_thr);
+            _kd_yaw.set_and_save(param._kd_yaw);
+            _kp_yaw.set_and_save(param._kp_yaw);
+            _pitch_fixed.set_and_save(param._pitch_fixed);
+        }
         /* 1. 误差量（机体坐标，m） */
         // float x_err = pkt.x_axis_err; // 前，用不到
         float y_err = pkt.y_axis_err; // 右
@@ -99,10 +108,9 @@ void ModeFollowExt::run()
         /* 4. 根据 y_err 计算偏航角速率（rad/s，机体轴）*/
         float yaw_rate_cmd = -_kp_yaw * y_err; // 负号：y>0（目标在右侧）→ 需左转
 
-        /* 5. 根据 z_err 计算推力补偿（0~1）*/
-        float thrust_bas = 0.5f;                        // 悬停基准推力
-        float thrust_cmd = thrust_bas - _kp_thr * z_err; // z>0（目标在下）→ 需加大推力
-        thrust_cmd = constrain_float(thrust_cmd, 0.2f, 0.8f);
+        /* 5. 根据 z_err 计算高度补偿*/
+        float thrust_bas = 0.0f;                        // 悬停基准推力
+        float thrust_cmd = thrust_bas - _kp_thr * z_err; // z>0（目标在下）→ 需提高高度
 
         /* 6. 组装角速度（机体轴，rad/s）*/
         Vector3f ang_vel_body(0.0f, 0.0f, yaw_rate_cmd); // 滚转、俯仰速率=0
@@ -112,7 +120,7 @@ void ModeFollowExt::run()
         att_quat.from_euler(roll_rad, pitch_rad, yaw_rad);
 
         /* 8. 调用 guided 角度接口 */
-        ModeGuided::set_angle(att_quat, ang_vel_body, thrust_cmd, true); // use_thrust=true
+        ModeGuided::set_angle(att_quat, ang_vel_body, thrust_cmd, false);
 
         break;
     }
