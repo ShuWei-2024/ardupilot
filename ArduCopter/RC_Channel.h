@@ -23,6 +23,7 @@ private:
 
     // called when the mode switch changes position:
     void mode_switch_changed(modeswitch_pos_t new_pos) override;
+    modeswitch_pos_t _last_set_mode = 100;
 
 };
 

@@ -20,11 +20,13 @@ void RC_Channel_Copter::mode_switch_changed(modeswitch_pos_t new_pos)
         // should not have been called
         return;
     }
-
+    if(new_pos == _last_set_mode){  //note:不会重复执行
+        return;
+    }
     if (!copter.set_mode((Mode::Number)copter.flight_modes[new_pos].get(), ModeReason::RC_COMMAND)) {
         return;
     }
-
+    _last_set_mode = new_pos;
     if (!rc().find_channel_for_option(AUX_FUNC::SIMPLE_MODE) &&
         !rc().find_channel_for_option(AUX_FUNC::SUPERSIMPLE_MODE)) {
         // if none of the Aux Switches are set to Simple or Super Simple Mode then
