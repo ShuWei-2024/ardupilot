@@ -139,8 +139,8 @@ struct CompanionSendPacket {
     int32_t my_lon;
     int32_t my_lat;
     int32_t my_alt;
-    uint16_t my_velocity;
     int16_t my_yaw;
+    uint16_t my_velocity;
     int16_t my_roll;
     int16_t my_pitch;
     uint8_t checksum;
