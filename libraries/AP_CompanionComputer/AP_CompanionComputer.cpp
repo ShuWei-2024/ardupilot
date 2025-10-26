@@ -294,6 +294,7 @@ void AP_CompanionComputer::send_data()
     Location loc;
     const auto &ahrs = AP::ahrs();
     if (ahrs.get_location(loc)) {
+        loc.change_alt_frame(Location::AltFrame::ABOVE_HOME);
         pkt.my_lon = loc.lng;
         pkt.my_lat = loc.lat;
         pkt.my_alt = loc.alt; // cm转m
@@ -307,11 +308,10 @@ void AP_CompanionComputer::send_data()
     }
     
     // 获取姿态
-    const Vector3f &att = ahrs.get_rotation_body_to_ned().to_euler312();
-    pkt.my_roll  = degrees(att.x) * 100; // 度转0.01度
-    pkt.my_pitch = degrees(att.y) * 100;
-    pkt.my_yaw   = degrees(att.z) * 100;
-    
+    pkt.my_pitch = ToDeg(ahrs.get_pitch()) * 100;
+    pkt.my_roll = ToDeg(ahrs.get_roll()) * 100;
+    pkt.my_yaw = ToDeg(ahrs.get_yaw()) * 100;
+
     // 计算校验和
     auto packet = PacketBuilder::serialize(pkt);
     packet[packet.size()-2] = calculate_checksum(packet.data(), packet.size()-2);

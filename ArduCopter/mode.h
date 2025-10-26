@@ -1901,6 +1901,8 @@ class ModeFollowExt : public ModeGuided {
     bool allows_arming(AP_Arming::Method method) const override { return true; }
     bool is_autopilot() const override { return true; }
 
+    void set_takeoff_status(bool desired_status){_takeoff_complete = desired_status;}
+
     static const struct AP_Param::GroupInfo var_info[];
 
   protected:

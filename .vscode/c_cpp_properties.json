@@ -13,7 +13,7 @@
             "cStandard": "c17",
             "cppStandard": "c++20",
             "intelliSenseMode": "linux-gcc-arm",
-            "compileCommands": "${workspaceFolder}/build/BiAnH743V6/compile_commands.json"
+            "compileCommands": "${workspaceFolder}/build/SHUEagleH743V1/compile_commands.json"
         }
     ],
     "version": 4
