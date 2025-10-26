@@ -278,6 +278,7 @@ void Copter::receive_companion_computer()
 {
     companion_computer.update();
     if(companion_computer.is_new_mode()){
+        mode_follow_ext.set_takeoff_status(false);
         set_mode(COPTER_MODE_FOLLOW_EXT, ModeReason::GCS_COMMAND);
         companion_computer.clear_new_mode_flag();
     }
@@ -748,6 +749,12 @@ void Copter::one_hz_loop()
 #if AC_CUSTOMCONTROL_MULTI_ENABLED
     custom_control.set_notch_sample_rate(AP::scheduler().get_filtered_loop_rate_hz());
 #endif
+    Location loc;
+    ahrs.get_location(loc);
+    loc.change_alt_frame(Location::AltFrame::ABOVE_HOME);
+    CompanionReceivePacket pkt = companion_computer.get_received_packet();
+    gcs().send_text(MAV_SEVERITY_INFO, "mylon:%ld, mylat:%ld, alt from home: %ld", loc.lng, loc.lat, loc.alt);
+    gcs().send_text(MAV_SEVERITY_INFO, "ctrlmode: %d", pkt.ctrl_mode);
 }
 
 void Copter::init_simple_bearing()

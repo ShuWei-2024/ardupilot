@@ -83,7 +83,7 @@ void ModeFollowExt::run()
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
     case 1: { // 角度控制模式 TODO:根据要求的速度测个角度,set_velocity控制?
-        if(cc.is_new_param()){
+        if (cc.is_new_param()) {
             cc.clear_new_param_flag();
             Mode1Param param = cc.get_mode1_param();
             _kd_thr.set_and_save(param._kd_thr);
@@ -92,36 +92,62 @@ void ModeFollowExt::run()
             _kp_yaw.set_and_save(param._kp_yaw);
             _pitch_fixed.set_and_save(param._pitch_fixed);
         }
-        /* 1. 误差量（机体坐标，m） */
+        /*  定姿
+        // 1. 误差量（机体坐标，m）
         // float x_err = pkt.x_axis_err; // 前，用不到
         float y_err = pkt.y_axis_err; // 右
         float z_err = pkt.z_axis_err; // 下
 
-        /* 2. 控制参数 */
+        // 2. 控制参数
         const float pitch_fixed = 25.0f * DEG_TO_RAD; // 固定 25°
 
-        /* 3. 滚转=0，俯仰=固定，偏航=当前航向 */
+        // 3. 滚转=0，俯仰=固定，偏航=当前航向
         float roll_rad = 0.0f;
         float pitch_rad = pitch_fixed;
         float yaw_rad = copter.ahrs.get_yaw(); // 保持当前航向作为基准
 
-        /* 4. 根据 y_err 计算偏航角速率（rad/s，机体轴）*/
+        // 4. 根据 y_err 计算偏航角速率（rad/s，机体轴）
         float yaw_rate_cmd = -_kp_yaw * y_err; // 负号：y>0（目标在右侧）→ 需左转
 
-        /* 5. 根据 z_err 计算高度补偿*/
+        // 5. 根据 z_err 计算高度补偿
         float thrust_bas = 0.0f;                        // 悬停基准推力
         float thrust_cmd = thrust_bas - _kp_thr * z_err; // z>0（目标在下）→ 需提高高度
 
-        /* 6. 组装角速度（机体轴，rad/s）*/
+        // 6. 组装角速度（机体轴，rad/s）
         Vector3f ang_vel_body(0.0f, 0.0f, yaw_rate_cmd); // 滚转、俯仰速率=0
 
-        /* 7. 生成姿态四元数 */
+        // 7. 生成姿态四元数
         Quaternion att_quat;
         att_quat.from_euler(roll_rad, pitch_rad, yaw_rad);
 
-        /* 8. 调用 guided 角度接口 */
+        // 8. 调用 guided 角度接口
         ModeGuided::set_angle(att_quat, ang_vel_body, thrust_cmd, false);
+*/
+        /* 定速*/
+        /* 1. 误差量（机体坐标，m） */
+        const float x_err = pkt.x_axis_err; // + 右
+        const float z_err = pkt.z_axis_err; // + 下
 
+        /* 2. 计算机体轴角速率 / 爬升速率 */
+        const float yaw_rate_cds = _kp_yaw * x_err * 100.0f; // deg/s → centideg/s
+        const float climb_rate_cms = _kp_thr * z_err;        // NEU 向上为正
+
+        /* 3. 始终 20 m/s 前飞（机体 +X）*/
+        const float forward_cms = 2000.0f; // 2000 cm/s
+        /* 4. 机体轴速度 → NEU 速度 */
+        const float yaw = copter.ahrs.get_yaw();
+        Vector3f vel_neu_cms{
+            forward_cms * cosf(yaw), // North
+            forward_cms * sinf(yaw), // East
+            climb_rate_cms           // Up（NEU）
+        };
+
+        /* 5. 下发 Guided 速度接口*/
+        ModeGuided::set_velocity(vel_neu_cms,        // NEU cm/s
+                                 false, 0,           // 不指定绝对 yaw
+                                 true, yaw_rate_cds, // 指定 yaw-rate
+                                 false,              // 绝对 yaw-rate
+                                 log_request);
         break;
     }
     case 3: { // 位置控制模式
@@ -151,7 +177,7 @@ void ModeFollowExt::run()
     }
     default:
         /* 未定义模式，可以原地悬停或什么都不做 */
-        Vector3f desired_velocity_neu_cms(1500.0f, 0.0f, 0.0f); // NEU, cm/s
+        Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NEU, cm/s
         ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
         break;
     }
