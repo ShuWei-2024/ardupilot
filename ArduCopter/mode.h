@@ -1912,8 +1912,12 @@ class ModeFollowExt : public ModeGuided {
     uint32_t last_log_ms;   // system time of last time desired velocity was logging
   private:
     bool _takeoff_complete = false;
+    RC_Channel *fole_ctrl_ch;
     float _takeoff_target_alt_cm = 500.0f; // 5m
     uint8_t _last_max_velocity = 10;
+    int32_t _last_lontitude = 0;
+    int32_t _last_latitude = 0;
+    int32_t _last_altitude = 0;
     AP_Int8 _followext_enabled;
     AP_Float _kp_yaw;
     AP_Float _kp_thr;

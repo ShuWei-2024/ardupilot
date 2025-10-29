@@ -1,8 +1,26 @@
 #include "Copter.h"
 #include <AP_Param/AP_Param.h>
+#include <AP_Math/AP_Math.h>
+#include "RC_Channel.h"
 
 #if MODE_FOLLOW_EXT_ENABLED
-
+/*
+ * ModeFollowExt State Machine
+ *
+ *        ┌────────┐
+ *        │  IDLE  │
+ *        └───┬────┘
+ *            │ arm + switch to mode 4
+ *            ▼
+ *        ┌────────┐
+ *        │ TAKEOFF│
+ *        └───┬────┘
+ *            │ reach alt
+ *            ▼
+ *        ┌────────┐     ┌────────┐
+ *        │ POS CTL│◄────┤ VEL CTL│
+ *        └────────┘     └────────┘
+ */
 /*
  * mode_follow.cpp  —— 串口目标版本
  * 数据源：ParsedPacket（lat/lon/alt/velocity/yaw）
@@ -156,8 +174,12 @@ void ModeFollowExt::run()
             pos_control->set_max_speed_accel_xy(pkt.max_velocity, 200.0f); // cm/s, cm/s^2
             _last_max_velocity = pkt.max_velocity;
         }
-        ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
-
+        if(_last_lontitude != pkt.target_lon || _last_latitude != pkt.target_lat || _last_altitude != pkt.target_alt){
+            _last_lontitude = pkt.target_lon;
+            _last_latitude = pkt.target_lat;
+            _last_altitude = pkt.target_alt;
+            ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
+        }
         break;
     }
     case 4: { // 起飞模式
