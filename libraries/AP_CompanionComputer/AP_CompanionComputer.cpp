@@ -373,7 +373,7 @@ void AP_CompanionComputer::Log_C2HC() const
         desired_yaw : _received_packet.desired_yaw / 100.0f,
         target_lon : _received_packet.target_lon / 1e7,
         target_lat : _received_packet.target_lat / 1e7,
-        target_alt : _received_packet.target_alt / 100.0f,
+        target_alt : _received_packet.target_alt,
         target_yaw : _received_packet.target_yaw / 100.0f,
         target_velocity : _received_packet.target_velocity / 100.0f,
         yaw_max_rate : _received_packet.yaw_max_rate / 1000.0f,
