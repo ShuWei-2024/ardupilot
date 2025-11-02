@@ -73,6 +73,8 @@
 #include <AP_Winch/AP_Winch_config.h>
 #include <AP_SurfaceDistance/AP_SurfaceDistance.h>
 
+#include <AP_CompanionComputer/AP_CompanionComputer.h>
+
 // Configuration
 #include "defines.h"
 #include "config.h"
@@ -553,6 +555,8 @@ private:
     // avoidance of adsb enabled vehicles (normally manned vehicles)
     AP_Avoidance_Copter avoidance_adsb{adsb};
 #endif
+
+    AP_CompanionComputer companion_computer;
 
     // last valid RC input time
     uint32_t last_radio_update_ms;
