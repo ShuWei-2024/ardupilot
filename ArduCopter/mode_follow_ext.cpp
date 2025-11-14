@@ -143,29 +143,29 @@ void ModeFollowExt::run()
 */
         /* 定速*/
         /* 1. 误差量（机体坐标，m） */
-        const float x_err = pkt.x_axis_err; // + 右
+        const float y_err = pkt.y_axis_err; // + 右
         const float z_err = pkt.z_axis_err; // + 下
 
         /* 2. 计算机体轴角速率 / 爬升速率 */
-        const float yaw_rate_cds = _kp_yaw * x_err * 100.0f; // deg/s → centideg/s
+        const float yaw_rate_cds = _kp_yaw * y_err * 100.0f; // deg/s → centideg/s
         const float climb_rate_cms = _kp_thr * z_err;        // NEU 向上为正
-
-        /* 3. 始终 20 m/s 前飞（机体 +X）*/
-        const float forward_cms = 2000.0f; // 2000 cm/s
-        /* 4. 机体轴速度 → NEU 速度 */
-        const float yaw = copter.ahrs.get_yaw();
-        Vector3f vel_neu_cms{
-            forward_cms * cosf(yaw), // North
-            forward_cms * sinf(yaw), // East
-            climb_rate_cms           // Up（NEU）
-        };
-
-        /* 5. 下发 Guided 速度接口*/
-        ModeGuided::set_velocity(vel_neu_cms,        // NEU cm/s
-                                 false, 0,           // 不指定绝对 yaw
-                                 true, yaw_rate_cds, // 指定 yaw-rate
-                                 false,              // 绝对 yaw-rate
+        Vector3f vel_vector;
+        vel_vector.x = 1000;
+        vel_vector.y = 0;
+        vel_vector.z = climb_rate_cms;
+        for (uint8_t i = 0; i < 3; i++) {
+            // consider velocity invalid if any component nan or >1000(m/s or m/s/s)
+            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 1000) {
+               copter.mode_guided.init(true); 
+            }
+        }
+        copter.rotate_body_frame_to_NE(vel_vector.x, vel_vector.y);
+        ModeGuided::set_velocity(vel_vector,         // NEU cm/s
+                                 false, 0,            // 不指定绝对 yaw
+                                 true, yaw_rate_cds,  // 指定 yaw-rate
+                                 false,               // 绝对 yaw-rate
                                  log_request);
+
         break;
     }
     case 3: { // 位置控制模式
@@ -195,6 +195,20 @@ void ModeFollowExt::run()
                 _takeoff_complete = true;
             }
         }
+        break;
+    }
+    case 5: { // 紧急停转模式
+        /* 5.1 立即关闭螺旋桨 */
+        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::SHUT_DOWN);
+
+        /* 5.2 不再下发任何 thrust / vel / pos 指令，让控制器空跑 */
+        // 可选：给 Guided 层一个零速度，防止积分飘掉（其实没必要，因为电机关了）
+        Vector3f zero_vel_neu_cms{0, 0, 0};
+        ModeGuided::set_velocity(zero_vel_neu_cms, // NEU cm/s
+                                 false, 0,         // 不控 yaw
+                                 false, 0,         // 不控 yaw-rate
+                                 false,
+                                 log_request);
         break;
     }
     default:
