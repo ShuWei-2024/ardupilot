@@ -749,12 +749,18 @@ void Copter::one_hz_loop()
 #if AC_CUSTOMCONTROL_MULTI_ENABLED
     custom_control.set_notch_sample_rate(AP::scheduler().get_filtered_loop_rate_hz());
 #endif
+
+#if CONFIG_HAL_BOARD != HAL_BOARD_SITL
     Location loc;
     ahrs.get_location(loc);
     loc.change_alt_frame(Location::AltFrame::ABOVE_HOME);
     CompanionReceivePacket pkt = companion_computer.get_received_packet();
-    gcs().send_text(MAV_SEVERITY_INFO, "mylon:%ld, mylat:%ld, alt from home: %ld", loc.lng, loc.lat, loc.alt);
+    gcs().send_text(MAV_SEVERITY_INFO, "mylon:%ld, mylat:%ld, alt: %ld", loc.lng, loc.lat, loc.alt);
     gcs().send_text(MAV_SEVERITY_INFO, "ctrlmode: %d", pkt.ctrl_mode);
+    Location dest_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
+    Vector2f loc_diff = dest_loc.get_distance_NE(loc);
+    gcs().send_text(MAV_SEVERITY_INFO, "loc_diff: %f", loc_diff.length());
+#endif
 }
 
 void Copter::init_simple_bearing()
