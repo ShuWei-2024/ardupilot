@@ -1914,7 +1914,7 @@ class ModeFollowExt : public ModeGuided {
     bool _takeoff_complete = false;
     RC_Channel *fole_ctrl_ch;
     float _takeoff_target_alt_cm = 500.0f; // 5m
-    uint8_t _last_max_velocity = 10;
+    uint16_t _last_max_velocity = 1000;     // 10m/s
     int32_t _last_lontitude = 0;
     int32_t _last_latitude = 0;
     int32_t _last_altitude = 0;

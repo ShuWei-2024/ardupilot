@@ -170,15 +170,20 @@ void ModeFollowExt::run()
     }
     case 3: { // 位置控制模式
         Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
-        if(_last_max_velocity != pkt.max_velocity){
-            pos_control->set_max_speed_accel_xy(pkt.max_velocity, 200.0f); // cm/s, cm/s^2
-            _last_max_velocity = pkt.max_velocity;
-        }
-        if(_last_lontitude != pkt.target_lon || _last_latitude != pkt.target_lat || _last_altitude != pkt.target_alt){
+        if(_last_lontitude != pkt.target_lon || _last_latitude != pkt.target_lat || _last_altitude != pkt.target_alt || _last_max_velocity != pkt.max_velocity){
             _last_lontitude = pkt.target_lon;
             _last_latitude = pkt.target_lat;
             _last_altitude = pkt.target_alt;
             ModeGuided::set_destination(target_loc, false, 0.0f, false, 0.0f, false);
+
+            if(pkt.max_velocity > 30){
+                pos_control->set_max_speed_accel_xy(pkt.max_velocity, 250.0f);
+                pos_control->set_correction_speed_accel_xy(pkt.max_velocity, 250.0f);
+            } else {
+                pos_control->set_max_speed_accel_xy(30, 30.0f);
+                pos_control->set_correction_speed_accel_xy(30, 30.0f);
+            }
+            _last_max_velocity = pkt.max_velocity;
         }
         break;
     }
@@ -186,7 +191,7 @@ void ModeFollowExt::run()
         //如果没有arm，先arm
         if (!copter.arming.is_armed()) {
             if (!copter.arming.arm(AP_Arming::Method::MAVLINK)) {
-                gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: Arm failed");
+                // gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: Arm failed");
             }
         }else{
             if(!_takeoff_complete){
@@ -198,11 +203,10 @@ void ModeFollowExt::run()
         break;
     }
     case 5: { // 紧急停转模式
-        /* 5.1 立即关闭螺旋桨 */
-        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::SHUT_DOWN);
+        /* 5.1 立即disarm */
+        copter.arming.disarm(AP_Arming::Method::AUXSWITCH);
 
         /* 5.2 不再下发任何 thrust / vel / pos 指令，让控制器空跑 */
-        // 可选：给 Guided 层一个零速度，防止积分飘掉（其实没必要，因为电机关了）
         Vector3f zero_vel_neu_cms{0, 0, 0};
         ModeGuided::set_velocity(zero_vel_neu_cms, // NEU cm/s
                                  false, 0,         // 不控 yaw
