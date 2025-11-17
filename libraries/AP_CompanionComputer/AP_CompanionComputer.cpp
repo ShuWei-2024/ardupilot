@@ -206,6 +206,13 @@ void AP_CompanionComputer::parse_flight_control_data()
             _new_mode_flag = true;
         }
         break;
+    case 0x05: // 追踪模式
+        // 进入追踪模式
+        if(_last_ctrl_mode != 0x05){
+            _last_ctrl_mode = 0x05;
+            _new_mode_flag = true;
+        }
+        break;
     default:
         // 未知控制模式
         break;
