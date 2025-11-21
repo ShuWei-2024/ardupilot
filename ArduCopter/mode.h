@@ -1923,7 +1923,7 @@ class ModeFollowExt : public ModeGuided {
     AP_Float _kp_thr;
     AP_Float _kd_yaw;
     AP_Float _kd_thr;
-    AP_Float _pitch_fixed;
+    AP_Float _speed;
 };
 #endif
 

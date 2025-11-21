@@ -42,7 +42,7 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     // @DisplayName: Follow mode I gain on throttle
     // @Description: Proportional gain in follow mode
     // @User: Advanced
-    AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 2.0f),
+    AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 0.5f),
     // @Param: FOLE_KD_YAW
     // @DisplayName: Follow mode D gain on yaw
     // @Description: Derivative gain in follow mode
@@ -53,11 +53,11 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     // @Description: Derivative gain in follow mode
     // @User: Advanced
     AP_GROUPINFO("KD_THR", 5, ModeFollowExt, _kd_thr, 0.0f),
-    //@Param: FOLE_Pitch
-    //@DisplayName: Follow mode pitch angle
-    //@Description: Fixed pitch angle in follow mode (degrees)
+    //@Param: FOLE_SPEED
+    //@DisplayName: Follow mode speed
+    //@Description: Fixed speed(cm/s)
     //@User: Advanced
-    AP_GROUPINFO("PITCH", 6, ModeFollowExt, _pitch_fixed, 25.0f),
+    AP_GROUPINFO("PITCH", 6, ModeFollowExt, _speed, 1000.0f),
 
     AP_GROUPEND};
 // 工具：把经纬度差转换成 cm（水平面）
@@ -108,7 +108,7 @@ void ModeFollowExt::run()
             _kp_thr.set_and_save(param._kp_thr);
             _kd_yaw.set_and_save(param._kd_yaw);
             _kp_yaw.set_and_save(param._kp_yaw);
-            _pitch_fixed.set_and_save(param._pitch_fixed);
+            _speed.set_and_save(param._speed);
         }
         /*  定姿
         // 1. 误差量（机体坐标，m）
@@ -147,15 +147,15 @@ void ModeFollowExt::run()
         const float z_err = pkt.z_axis_err; // + 下
 
         /* 2. 计算机体轴角速率 / 爬升速率 */
-        const float yaw_rate_cds = _kp_yaw * y_err * 100.0f; // deg/s → centideg/s
+        const float yaw_rate_cds = _kp_yaw * y_err; // centideg/s
         const float climb_rate_cms = _kp_thr * z_err;        // NEU 向上为正
         Vector3f vel_vector;
-        vel_vector.x = 1000;
+        vel_vector.x = _speed;
         vel_vector.y = 0;
         vel_vector.z = climb_rate_cms;
         for (uint8_t i = 0; i < 3; i++) {
             // consider velocity invalid if any component nan or >1000(m/s or m/s/s)
-            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 1000) {
+            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 3000) {
                copter.mode_guided.init(true); 
             }
         }
