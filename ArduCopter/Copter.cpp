@@ -279,7 +279,7 @@ void Copter::receive_companion_computer()
     companion_computer.update();
     if(companion_computer.is_new_mode()){
         mode_follow_ext.set_takeoff_status(false);
-        set_mode(COPTER_MODE_FOLLOW_EXT, ModeReason::GCS_COMMAND);
+        // set_mode(COPTER_MODE_FOLLOW_EXT, ModeReason::GCS_COMMAND);
         companion_computer.clear_new_mode_flag();
     }
 }
