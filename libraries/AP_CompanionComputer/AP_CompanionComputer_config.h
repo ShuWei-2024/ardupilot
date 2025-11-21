@@ -170,7 +170,7 @@ struct Mode1Param
     float _kp_thr;
     float _kd_yaw;
     float _kd_thr;
-    float _pitch_fixed;
+    float _speed;
 };
 
 // 数据包构建器
