@@ -57,38 +57,36 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     //@DisplayName: Follow mode speed
     //@Description: Fixed speed(cm/s)
     //@User: Advanced
-    AP_GROUPINFO("PITCH", 6, ModeFollowExt, _speed, 1000.0f),
+    AP_GROUPINFO("SPEED", 6, ModeFollowExt, _speed, 1000.0f),
+    //@Param: FOLE_ALPHA
+    //@DisplayName: Follow mode alpha
+    //@Description: Low pass filter alpha parameter in Follow mode
+    //@Range: 0.0 1.0
+    //@User: Advanced
+    AP_GROUPINFO("ALPHA", 7, ModeFollowExt, _alpha, 1.0f),
 
     AP_GROUPEND};
-// 工具：把经纬度差转换成 cm（水平面）
-// static Vector2f diff_location_cm(const Location &loc1, const Location &loc2)
-// {
-//     float bearing = loc1.get_bearing_to(loc2) * 0.01f; // centideg -> deg
-//     float dist = loc1.get_distance(loc2) * 100.0f;     // m -> cm
-//     return Vector2f(dist * cosf(radians(bearing)), dist * sinf(radians(bearing)));
-// }
+
+ModeFollowExt::ModeFollowExt(void)
+{
+    AP_Param::setup_object_defaults(this, var_info);
+}
 
 // 初始化
 bool ModeFollowExt::init(const bool ignore_checks)
 {
-    // return ModeGuided::init(ignore_checks);
-    AP_Param::setup_object_defaults(this, var_info);
     gcs().send_text(MAV_SEVERITY_DEBUG, "entry FOLLOW_EXT");
-    return true;
+    y_err = 0;
+    z_err = 0;
+    return ModeGuided::init(ignore_checks);
 }
 
 void ModeFollowExt::run()
 {
-    /* 1. 基础安全处理（可选，需要就打开） */
-    // if (is_disarmed_or_landed()) {
-    //     make_safe_ground_handling();
-    //     return;
-    // }
-
     /* 2. 10 Hz 日志标记 */
     const uint32_t now = AP_HAL::millis();
-    const bool log_request = (now - last_log_ms >= 100) || (last_log_ms == 0);
-    if (log_request)
+    const bool ten_hz_flag = (now - last_log_ms >= 100) || (last_log_ms == 0);
+    if (ten_hz_flag)
         last_log_ms = now;
 
     /* 3. 电机解锁状态 */
@@ -101,15 +99,16 @@ void ModeFollowExt::run()
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
     case 1: { // 角度控制模式 TODO:根据要求的速度测个角度,set_velocity控制?
-        if (cc.is_new_param()) {
-            cc.clear_new_param_flag();
-            Mode1Param param = cc.get_mode1_param();
-            _kd_thr.set_and_save(param._kd_thr);
-            _kp_thr.set_and_save(param._kp_thr);
-            _kd_yaw.set_and_save(param._kd_yaw);
-            _kp_yaw.set_and_save(param._kp_yaw);
-            _speed.set_and_save(param._speed);
-        }
+        // if (cc.is_new_param()) {
+        //     cc.clear_new_param_flag();
+        //     Mode1Param param = cc.get_mode1_param();
+        //     _kd_thr.set_and_save(param._kd_thr);
+        //     _kp_thr.set_and_save(param._kp_thr);
+        //     _kd_yaw.set_and_save(param._kd_yaw);
+        //     _kp_yaw.set_and_save(param._kp_yaw);
+        //     _speed.set_and_save(param._speed);
+        //     _alpha.set_and_save(param._alpha);
+        // }
         /*  定姿
         // 1. 误差量（机体坐标，m）
         // float x_err = pkt.x_axis_err; // 前，用不到
@@ -143,11 +142,15 @@ void ModeFollowExt::run()
 */
         /* 定速*/
         /* 1. 误差量（机体坐标，m） */
-        const int16_t y_err = pkt.y_axis_err; // + 右
-        const int16_t z_err = pkt.z_axis_err; // + 下
+        if(ten_hz_flag == 0){   //10hz控制
+            break;
+        }
+        // 添加低通滤波减少抖动
+        y_err = _alpha * pkt.y_axis_err + (1.0f - _alpha) * y_err;// + 右
+        z_err = _alpha * pkt.z_axis_err + (1.0f - _alpha) * z_err;// + 下
 
         /* 2. 计算机体轴角速率 / 爬升速率 */
-        const float yaw_rate_cds = -_kp_yaw * (float)y_err; // centideg/s
+        const float yaw_rate_cds = _kp_yaw * (float)y_err; // centideg/s
         const float climb_rate_cms = _kp_thr * (float)z_err;    //向下为正
         Vector3f vel_vector;
         vel_vector.x = _speed;
@@ -164,13 +167,12 @@ void ModeFollowExt::run()
                                  false, 0,            // 不指定绝对 yaw
                                  true, yaw_rate_cds,  // 指定 yaw-rate
                                  false,               // 绝对 yaw-rate
-                                 log_request);
-
+                                 ten_hz_flag);
         break;
     }
     case 3: { // 位置控制模式
-        Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
         if(_last_lontitude != pkt.target_lon || _last_latitude != pkt.target_lat || _last_altitude != pkt.target_alt || _last_max_velocity != pkt.max_velocity){
+            Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
             _last_lontitude = pkt.target_lon;
             _last_latitude = pkt.target_lat;
             _last_altitude = pkt.target_alt;
@@ -189,7 +191,7 @@ void ModeFollowExt::run()
     }
     case 4: { // 起飞模式
         //如果没有arm，先arm
-        if (!copter.arming.is_armed()) {
+        if (ten_hz_flag && !copter.arming.is_armed()) {
             if (!copter.arming.arm(AP_Arming::Method::MAVLINK)) {
                 // gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: Arm failed");
             }
@@ -208,17 +210,19 @@ void ModeFollowExt::run()
 
         /* 5.2 不再下发任何 thrust / vel / pos 指令，让控制器空跑 */
         Vector3f zero_vel_neu_cms{0, 0, 0};
-        ModeGuided::set_velocity(zero_vel_neu_cms, // NEU cm/s
+        ModeGuided::set_velocity(zero_vel_neu_cms, // NED cm/s
                                  false, 0,         // 不控 yaw
                                  false, 0,         // 不控 yaw-rate
                                  false,
-                                 log_request);
+                                 ten_hz_flag);
         break;
     }
     default:
         /* 未定义模式，可以原地悬停或什么都不做 */
-        Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NEU, cm/s
-        ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, log_request);
+        if(ten_hz_flag){
+            Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NED, cm/s
+            ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, ten_hz_flag);
+        }
         break;
     }
 

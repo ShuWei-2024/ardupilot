@@ -1889,6 +1889,7 @@ protected:
 #if MODE_FOLLOW_EXT_ENABLED
 class ModeFollowExt : public ModeGuided {
   public:
+    ModeFollowExt(void);
     // inherit constructor
     using ModeGuided::Mode;
     Number mode_number() const override { return Number::FOLLOW_EXT; }
@@ -1918,12 +1919,16 @@ class ModeFollowExt : public ModeGuided {
     int32_t _last_lontitude = 0;
     int32_t _last_latitude = 0;
     int32_t _last_altitude = 0;
+    int16_t y_err = 0;
+    int16_t z_err = 0;
+
     AP_Int8 _followext_enabled;
     AP_Float _kp_yaw;
     AP_Float _kp_thr;
     AP_Float _kd_yaw;
     AP_Float _kd_thr;
     AP_Float _speed;
+    AP_Float _alpha;
 };
 #endif
 

@@ -171,6 +171,7 @@ struct Mode1Param
     float _kd_yaw;
     float _kd_thr;
     float _speed;
+    float _alpha;
 };
 
 // 数据包构建器
