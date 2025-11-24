@@ -37,12 +37,12 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     //  @DisplayName: Follow mode P gain on yaw
     //  @Description: Proportional gain in follow mode
     //  @User: Advanced
-    AP_GROUPINFO("KP_YAW", 2, ModeFollowExt, _kp_yaw, 2.0f),
+    AP_GROUPINFO("KP_YAW", 2, ModeFollowExt, _kp_yaw, 0.05f),
     // @Param: FOLE_KP_THR
     // @DisplayName: Follow mode I gain on throttle
     // @Description: Proportional gain in follow mode
     // @User: Advanced
-    AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 0.5f),
+    AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 0.1f),
     // @Param: FOLE_KD_YAW
     // @DisplayName: Follow mode D gain on yaw
     // @Description: Derivative gain in follow mode
@@ -143,12 +143,12 @@ void ModeFollowExt::run()
 */
         /* 定速*/
         /* 1. 误差量（机体坐标，m） */
-        const float y_err = pkt.y_axis_err; // + 右
-        const float z_err = pkt.z_axis_err; // + 下
+        const int16_t y_err = pkt.y_axis_err; // + 右
+        const int16_t z_err = pkt.z_axis_err; // + 下
 
         /* 2. 计算机体轴角速率 / 爬升速率 */
-        const float yaw_rate_cds = _kp_yaw * y_err; // centideg/s
-        const float climb_rate_cms = _kp_thr * z_err;        // NEU 向上为正
+        const float yaw_rate_cds = -_kp_yaw * (float)y_err; // centideg/s
+        const float climb_rate_cms = _kp_thr * (float)z_err;    //向下为正
         Vector3f vel_vector;
         vel_vector.x = _speed;
         vel_vector.y = 0;
@@ -160,7 +160,7 @@ void ModeFollowExt::run()
             }
         }
         copter.rotate_body_frame_to_NE(vel_vector.x, vel_vector.y);
-        ModeGuided::set_velocity(vel_vector,         // NEU cm/s
+        ModeGuided::set_velocity(vel_vector,         // NED cm/s 向下是正
                                  false, 0,            // 不指定绝对 yaw
                                  true, yaw_rate_cds,  // 指定 yaw-rate
                                  false,               // 绝对 yaw-rate
