@@ -649,6 +649,9 @@ public:
 
     AC_CommandModel command_model_pilot;
 
+    AC_ArmControl armcontrol;
+    AC_Inclination_Serial angle_uart;
+
 #if MODE_ACRO_ENABLED == ENABLED
     AP_Int8 acro_options;
 #endif

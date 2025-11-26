@@ -266,6 +266,9 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if STATS_ENABLED == ENABLED
     SCHED_TASK_CLASS(AP_Stats,             &copter.g2.stats,            update,           1, 100, 171),
 #endif
+
+    // SCHED_TASK_CLASS(AC_ArmControl,        &copter.g2.armcontrol,          pwm_output, 20, 100, 200),
+    SCHED_TASK_CLASS(AC_Inclination_Serial,        &copter.g2.angle_uart,          get_reading, 20, 100, 201),
 };
 
 void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,

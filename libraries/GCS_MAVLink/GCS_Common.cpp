@@ -2883,7 +2883,7 @@ MAV_STATE GCS_MAVLINK::system_status() const
   Send MAVLink heartbeat
  */
 void GCS_MAVLINK::send_heartbeat() const
-{
+{   
     mavlink_msg_heartbeat_send(
         chan,
         gcs().frame_type(),

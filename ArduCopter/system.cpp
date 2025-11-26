@@ -212,7 +212,6 @@ void Copter::init_ardupilot()
     // attempt to set the initial_mode, else set to STABILIZE
     if (!set_mode((enum Mode::Number)g.initial_mode.get(), ModeReason::INITIALISED)) {
         // set mode to STABILIZE will trigger mode change notification to pilot
-        set_mode(Mode::Number::STABILIZE, ModeReason::UNAVAILABLE);
     }
 
     pos_variance_filt.set_cutoff_frequency(g2.fs_ekf_filt_hz);

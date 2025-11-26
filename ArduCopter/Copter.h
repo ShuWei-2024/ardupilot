@@ -73,6 +73,9 @@
 #include <AP_OpticalFlow/AP_OpticalFlow.h>
 #include <AP_Winch/AP_Winch_config.h>
 
+#include <AC_ArmControl/AC_ArmControl.h>
+#include <AC_Inclination_Serial/AC_Inclination_Serial.h>
+
 // Configuration
 #include "defines.h"
 #include "config.h"
@@ -663,8 +666,6 @@ private:
                   "FAILSAFE_LAND_PRIORITY must match the entry in _failsafe_priorities");
     static_assert(_failsafe_priorities[ARRAY_SIZE(_failsafe_priorities) - 1] == -1,
                   "_failsafe_priorities is missing the sentinel");
-
-
 
     // AP_State.cpp
     void set_auto_armed(bool b);

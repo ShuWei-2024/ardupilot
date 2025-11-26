@@ -252,8 +252,7 @@ bool Copter::set_mode(Mode::Number mode, ModeReason reason)
 {
     // update last reason
     const ModeReason last_reason = _last_reason;
-    _last_reason = reason;
-
+    _last_reason = reason;  
     // return immediately if we are already in the desired mode
     if (mode == flightmode->mode_number()) {
         control_mode_reason = reason;
@@ -267,7 +266,6 @@ bool Copter::set_mode(Mode::Number mode, ModeReason reason)
         }
         return true;
     }
-
     // Check if GCS mode change is disabled via parameter
     if ((reason == ModeReason::GCS_COMMAND) && !gcs_mode_enabled(mode)) {
         return false;
