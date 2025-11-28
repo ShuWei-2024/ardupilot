@@ -78,6 +78,7 @@ bool ModeFollowExt::init(const bool ignore_checks)
     gcs().send_text(MAV_SEVERITY_DEBUG, "entry FOLLOW_EXT");
     y_err = 0;
     z_err = 0;
+    last_log_ms = 0;
     return ModeGuided::init(ignore_checks);
 }
 
@@ -191,7 +192,10 @@ void ModeFollowExt::run()
     }
     case 4: { // 起飞模式
         //如果没有arm，先arm
-        if (ten_hz_flag && !copter.arming.is_armed()) {
+        if(!ten_hz_flag){ 
+            break;
+        }
+        if (!copter.arming.is_armed()) {
             if (!copter.arming.arm(AP_Arming::Method::MAVLINK)) {
                 // gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: Arm failed");
             }
