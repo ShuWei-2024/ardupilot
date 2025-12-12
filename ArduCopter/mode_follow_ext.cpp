@@ -99,7 +99,7 @@ void ModeFollowExt::run()
 
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
-    case 1: { // 角度控制模式 TODO:根据要求的速度测个角度,set_velocity控制?
+    case 1: { // 视觉导引模式
         // if (cc.is_new_param()) {
         //     cc.clear_new_param_flag();
         //     Mode1Param param = cc.get_mode1_param();
@@ -140,19 +140,33 @@ void ModeFollowExt::run()
 
         // 8. 调用 guided 角度接口
         ModeGuided::set_angle(att_quat, ang_vel_body, thrust_cmd, false);
-*/
+        */
+
+        _last_altitude = 0;
+        _last_latitude = 0;
+        _last_altitude = 0;
         /* 定速*/
         /* 1. 误差量（机体坐标，m） */
         if(ten_hz_flag == 0){   //10hz控制
             break;
         }
         // 添加低通滤波减少抖动
-        y_err = _alpha * pkt.y_axis_err + (1.0f - _alpha) * y_err;// + 右
-        z_err = _alpha * pkt.z_axis_err + (1.0f - _alpha) * z_err;// + 下
+        float alpha = constrain_float(_alpha.get(), 0.0f, 1.0f);
+        y_err = alpha * (float)pkt.y_axis_err + (1.0f - alpha) * y_err;// + 右
+        z_err = alpha * (float)pkt.z_axis_err + (1.0f - alpha) * z_err;// + 下
 
         /* 2. 计算机体轴角速率 / 爬升速率 */
-        const float yaw_rate_cds = _kp_yaw * (float)y_err; // centideg/s
-        const float climb_rate_cms = _kp_thr * (float)z_err;    //向下为正
+        float yaw_rate_cds = _kp_yaw * y_err; // centideg/s
+        yaw_rate_cds = constrain_float(yaw_rate_cds, -2500.0f, 2500.0f);
+        float v_now = MAX(_speed, 100.0f); // 避免除0
+        float v_ref = 500.0f;              // 参考速度
+        float speed_ratio = v_now / v_ref; // >1 = 高速，<1 = 低速
+        float k = 0.5f;
+        float kp_thr_eff = _kp_thr * sqrtf(0.5f + k * speed_ratio * speed_ratio);
+        kp_thr_eff = constrain_float(kp_thr_eff, _kp_thr * 0.5f, _kp_thr * 2.0f);
+        float climb_rate_cms = kp_thr_eff * z_err;
+        climb_rate_cms = constrain_float(climb_rate_cms, -200.0f, 200.0f);
+
         Vector3f vel_vector;
         vel_vector.x = _speed;
         vel_vector.y = 0;
@@ -173,6 +187,8 @@ void ModeFollowExt::run()
     }
     case 3: { // 位置控制模式
         if(_last_lontitude != pkt.target_lon || _last_latitude != pkt.target_lat || _last_altitude != pkt.target_alt || _last_max_velocity != pkt.max_velocity){
+            y_err = 0;
+            z_err = 0;
             Location target_loc(pkt.target_lat, pkt.target_lon, pkt.target_alt, Location::AltFrame::ABOVE_HOME);
             _last_lontitude = pkt.target_lon;
             _last_latitude = pkt.target_lat;
@@ -224,6 +240,11 @@ void ModeFollowExt::run()
     default:
         /* 未定义模式，可以原地悬停或什么都不做 */
         if(ten_hz_flag){
+            _last_altitude = 0;
+            _last_latitude = 0;
+            _last_altitude = 0;
+            y_err = 0;
+            z_err = 0;
             Vector3f desired_velocity_neu_cms(0.0f, 0.0f, 0.0f); // NED, cm/s
             ModeGuided::set_velocity(desired_velocity_neu_cms, false, 0.0, false, 0.0f, false, ten_hz_flag);
         }
