@@ -1919,8 +1919,8 @@ class ModeFollowExt : public ModeGuided {
     int32_t _last_lontitude = 0;
     int32_t _last_latitude = 0;
     int32_t _last_altitude = 0;
-    int16_t y_err = 0;
-    int16_t z_err = 0;
+    float y_err = 0;
+    float z_err = 0;
 
     AP_Int8 _followext_enabled;
     AP_Float _kp_yaw;
