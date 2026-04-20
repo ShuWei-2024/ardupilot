@@ -61,6 +61,7 @@
 #include <AP_VideoTX/AP_SmartAudio.h>
 #include <AP_VideoTX/AP_Tramp.h>
 #include <AP_TemperatureSensor/AP_TemperatureSensor.h>
+#include <Encipher/AESEncipher.h>
 #include <SITL/SITL.h>
 #include <AP_CustomRotations/AP_CustomRotations.h>
 #include <AP_AIS/AP_AIS.h>
@@ -301,6 +302,8 @@ public:
     virtual bool set_home_to_current_location(bool lock) WARN_IF_UNUSED { return false; }
     virtual bool set_home(const Location& loc, bool lock) WARN_IF_UNUSED { return false; }
 #endif
+
+    AESEncipher encipher;
 
 protected:
 

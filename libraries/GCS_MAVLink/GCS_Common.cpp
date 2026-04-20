@@ -112,6 +112,11 @@ extern AP_IOMCU iomcu;
 
 #include <ctype.h>
 
+#include <AP_Vehicle/AP_Vehicle.h>
+
+extern AESEncipher& encipher;
+// AESAssembler assembler;
+
 extern const AP_HAL::HAL& hal;
 
 struct GCS_MAVLINK::LastRadioStatus GCS_MAVLINK::last_radio_status;
@@ -1849,10 +1854,47 @@ GCS_MAVLINK::update_receive(uint32_t max_time_us)
 
     status.packet_rx_drop_count = 0;
 
-    const uint16_t nbytes = _port->available();
+    uint16_t nbytes = _port->available();
+    AESAssembler::Message AESMsg;
+    uint8_t* decrypt_buff = nullptr;
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if(chan != 0 && encipher.isEnable() && nbytes > 0) { // for mavproxy
+#else
+    if(chan == 0 && encipher.isEnable() && nbytes > 0) {
+#endif
+        uint8_t* data = new uint8_t[nbytes];
+        
+        _port->read(data, nbytes);
+        assembler.prepare(data, nbytes);
+
+        nbytes = 0;
+        delete[] data;
+    }
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    if(chan != 0 && encipher.isEnable() && assembler.parse(AESMsg)) {
+#else
+    if(chan == 0 && encipher.isEnable() && assembler.parse(AESMsg)) {
+#endif
+        if(encipher.aes_decrypt(decrypt_buff, AESMsg.payload, AESMsg.length)) {
+            nbytes = AESMsg.length;
+        }
+        delete[] AESMsg.payload;
+    }
+    
     for (uint16_t i=0; i<nbytes; i++)
     {
-        const uint8_t c = (uint8_t)_port->read();
+        uint8_t c = 0;
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
+        if(chan !=0 && encipher.isEnable()) {
+#else
+        if(chan == 0 && encipher.isEnable()) {
+#endif
+            c = decrypt_buff[i];
+        } else {
+            c = (uint8_t)_port->read();
+        }
         const uint32_t protocol_timeout = 4000;
         
         if (alternative.handler &&
@@ -1901,10 +1943,24 @@ GCS_MAVLINK::update_receive(uint32_t max_time_us)
 
         if (parsed_packet || i % 100 == 0) {
             // make sure we don't spend too much time parsing mavlink messages
+            //仿真用%d，实机用%ld
             if (AP_HAL::micros() - tstart_us > max_time_us) {
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+                send_text(MAV_SEVERITY_INFO, "parse packet timeout:%dus", AP_HAL::micros() - tstart_us);
+#else
+                send_text(MAV_SEVERITY_INFO, "parse packet timeout:%ldus", AP_HAL::micros() - tstart_us);
+#endif
                 break;
             }
         }
+    }
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL 
+    if(chan != 0 && encipher.isEnable() && nbytes > 0) {
+#else
+    if(encipher.isEnable() && nbytes > 0) {
+#endif
+        delete[] decrypt_buff;
     }
 
     const uint32_t tnow = AP_HAL::millis();
@@ -2702,7 +2758,11 @@ void GCS::update_send()
 void GCS::update_receive(void)
 {
     for (uint8_t i=0; i<num_gcs(); i++) {
-        chan(i)->update_receive();
+        if(encipher.isEnable()) {
+            chan(i)->update_receive(2500);
+        } else {
+            chan(i)->update_receive();
+        }
     }
     // also update UART pass-thru, if enabled
     update_passthru();

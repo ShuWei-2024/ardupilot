@@ -8,6 +8,8 @@
 #if HAL_GCS_ENABLED
 
 #include <AP_AdvancedFailsafe/AP_AdvancedFailsafe_config.h>
+#include <Encipher/AESEncipher.h>
+
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
 #include "GCS_MAVLink.h"
@@ -239,6 +241,8 @@ public:
                                      result,
                                      mission_type);
     }
+
+    AESAssembler assembler;
 
     // packetReceived is called on any successful decode of a mavlink message
     virtual void packetReceived(const mavlink_status_t &status,

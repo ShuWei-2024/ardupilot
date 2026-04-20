@@ -285,6 +285,9 @@ const AP_Param::GroupInfo AP_Vehicle::var_info[] = {
     // @Path: ../AP_SerialManager/AP_SerialManager.cpp
     AP_SUBGROUPINFO(serial_manager, "SERIAL", 31, AP_Vehicle, AP_SerialManager),
 #endif
+    // @Group: ARSPD
+    // @Path: ../Encipher/AESEncipher.cpp
+    AP_SUBGROUPINFO(encipher, "ENcipher_", 32, AP_Vehicle, AESEncipher),
 
     AP_GROUPEND
 };

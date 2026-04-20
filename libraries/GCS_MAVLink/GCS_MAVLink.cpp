@@ -29,6 +29,7 @@ This provides some support code and variables for MAVLink enabled sketches
 
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_Vehicle/AP_Vehicle.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -77,6 +78,8 @@ static HAL_Semaphore chan_locks[MAVLINK_COMM_NUM_BUFFERS];
 static bool chan_discard[MAVLINK_COMM_NUM_BUFFERS];
 
 mavlink_system_t mavlink_system = {7,1};
+
+AESEncipher& encipher = AP::vehicle()->encipher;
 
 // routing table
 MAVLink_routing GCS_MAVLINK::routing;
@@ -146,14 +149,34 @@ void comm_send_buffer(mavlink_channel_t chan, const uint8_t *buf, uint8_t len)
         // an alternative protocol is active
         return;
     }
-    const size_t written = mavlink_comm_port[chan]->write(buf, len);
+
+    uint8_t* dest = nullptr;
+    uint32_t length = len;
+
+    if(encipher.isEnable()) {
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
-    if (written < len && !mavlink_comm_port[chan]->is_write_locked()) {
-        AP_HAL::panic("Short write on UART: %lu < %u", (unsigned long)written, len);
-    }
+        if(chan != 0) {
+            encipher.aes_encrypt(dest, buf, length);
+
+            mavlink_comm_port[chan]->write(dest, length);
+            delete[] dest;
+        } else { // for mavproxy
+            mavlink_comm_port[chan]->write(buf, len);
+        }
 #else
-    (void)written;
+        if(chan != 0) {
+            mavlink_comm_port[chan]->write(buf, len);
+            return;
+        } else {
+            encipher.aes_encrypt(dest, buf, length);
+
+            mavlink_comm_port[chan]->write(dest, length);
+            delete[] dest;
+        }
 #endif
+    } else {
+        mavlink_comm_port[chan]->write(buf, len);
+    }
 }
 
 /*

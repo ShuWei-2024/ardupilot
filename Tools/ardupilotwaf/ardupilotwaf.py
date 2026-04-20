@@ -130,6 +130,7 @@ COMMON_VEHICLE_DEPENDENT_LIBRARIES = [
     'AP_RCMapper',
     'AP_MultiHeap',
     'tinycrypt',
+    'Encipher',
 ]
 
 def get_legacy_defines(sketch_name, bld):

@@ -170,6 +170,10 @@ void Helicopter::update(const struct sitl_input &input)
         // Walker, J, Tishler, M, "Identification and Control Design of a Sub-Scale Flybarless Helicopter",
         // Vertical Flight Society’s 77th Annual Forum & Technology Display, Virtual, May 10-14, 2021.
 
+#ifdef Nr
+#undef Nr
+#endif
+
         float Ma1s = 796.7f;
         float Lb1s = 5115.2f;
         float Mu = 2.7501f;
