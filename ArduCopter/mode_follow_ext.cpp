@@ -178,7 +178,7 @@ void ModeFollowExt::run()
             }
         }
         copter.rotate_body_frame_to_NE(vel_vector.x, vel_vector.y);
-        ModeGuided::set_velocity(vel_vector,         // NED cm/s 向下是正
+        ModeGuided::set_velocity(vel_vector,         // NEU cm/s 向上是正
                                  false, 0,            // 不指定绝对 yaw
                                  true, yaw_rate_cds,  // 指定 yaw-rate
                                  false,               // 绝对 yaw-rate
