@@ -277,6 +277,19 @@ void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
 void Copter::receive_companion_computer()
 {
     companion_computer.update();
+
+    CompanionParamCommand command;
+    uint8_t processed_commands = 0;
+    while (processed_commands < 2 && companion_computer.pop_parameter_command(command)) {
+        float actual_value = NAN;
+        const CompanionParamStatus status = mode_follow_ext.handle_external_param(command.operation,
+                                                                                  command.param_id,
+                                                                                  command.value,
+                                                                                  actual_value);
+        companion_computer.send_parameter_response(command, status, actual_value);
+        processed_commands++;
+    }
+
     if(companion_computer.is_new_mode()){
         mode_follow_ext.set_takeoff_status(false);
         // set_mode(COPTER_MODE_FOLLOW_EXT, ModeReason::GCS_COMMAND);

@@ -71,6 +71,7 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
             _rx_state = RxState::WAITING_HEADER2;
             _rx_start_time = now;
             _rx_count = 0;
+            _rx_buffer.fill(0);
         }
         break;
 
@@ -81,27 +82,35 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
             _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER1;
             _rx_buffer[_rx_count++] = COMPANION_FRAME_HEADER2;
         } else {
-            _rx_state = RxState::WAITING_HEADER1;
+            reset_rx_state();
         }
         break;
 
     case RxState::WAITING_SOURCE:
+        if (oneByte != COMPANION_CMD_SOURCE_RCVR) {
+            reset_rx_state();
+            break;
+        }
         _rx_state = RxState::WAITING_TYPE;
         _cmd_source = oneByte;
         _rx_buffer[_rx_count++] = oneByte;
         break;
 
     case RxState::WAITING_TYPE:
-        if (oneByte <= 0x03) {
+        if (oneByte >= 0x01 && oneByte <= 0x03) {
             _rx_state = RxState::WAITING_LENGTH;
             _rx_buffer[_rx_count++] = oneByte;
             _cmd_type = oneByte;
         } else {
-            _rx_state = RxState::WAITING_HEADER1;
+            reset_rx_state();
         }
         break;
 
     case RxState::WAITING_LENGTH:
+        if (oneByte > COMPANION_MAX_RECV_DATA_LENGTH) {
+            reset_rx_state();
+            break;
+        }
         _rx_state = RxState::RECEIVING_DATA;
         _data_len = oneByte;
         _rx_buffer[_rx_count++] = oneByte;
@@ -109,15 +118,18 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
 
     case RxState::RECEIVING_DATA:
         if (now - _rx_start_time > PACKET_TIMEOUT_MS) {
-            _rx_state = RxState::WAITING_HEADER1;
-            _rx_count = 0;
+            reset_rx_state();
             break;
         }
 
+        if (_rx_count >= _rx_buffer.size()) {
+            reset_rx_state();
+            break;
+        }
         _rx_buffer[_rx_count++] = oneByte;
         
         // 检查是否接收到完整数据包（包括帧头、校验和、结束符）
-        if (_rx_count >= (_data_len + 7)) {
+        if (_rx_count == (_data_len + 7)) {
             // 完整数据包接收，进行校验
             if (validate_packet()) {
                 // 根据指令类型解析数据
@@ -140,16 +152,27 @@ void AP_CompanionComputer::process_received_data(uint8_t oneByte)
                 // _uart->write("checksum error\n");  // debug-print
             }
 
-            _rx_state = RxState::WAITING_HEADER1;
-            _rx_count = 0;
+            reset_rx_state();
         }
         break;
     }
 }
 
+void AP_CompanionComputer::reset_rx_state()
+{
+    _rx_state = RxState::WAITING_HEADER1;
+    _rx_count = 0;
+    _data_len = 0;
+}
+
 // 解析飞行控制数据
 void AP_CompanionComputer::parse_flight_control_data()
 {
+    if (_data_len != COMPANION_RECV_DATA_LENGTH ||
+        _rx_count != COMPANION_CONTROL_RECV_TOTAL_LENGTH) {
+        return;
+    }
+
     _received_packet =
         PacketBuilder::deserialize<CompanionReceivePacket>(_rx_buffer.data());
     // _parsed_packet = {
@@ -220,22 +243,65 @@ void AP_CompanionComputer::parse_flight_control_data()
     
 }
 
-// 解析参数设置数据（待实现）
+// 解析参数设置数据
 void AP_CompanionComputer::parse_parameter_data()
 {
-    // 根据具体参数格式实现解析逻辑
-    // 示例：提取参数索引和值
-    // uint8_t param_index = buffer[3]; // 假设参数索引在第四个字节
-    // float param_value = *reinterpret_cast<float*>(&buffer[4]); // 假设参数值从第五个字节开始
-    // set_parameter(param_index, param_value);
-    _new_param_flag = true;
-    send_response(0x01, 0x01);
+    CompanionParamCommand command{};
+    command.version = (_data_len > 0) ? _rx_buffer[5] : 0;
+    command.operation = (_data_len > 1) ? static_cast<CompanionParamOperation>(_rx_buffer[6])
+                                        : static_cast<CompanionParamOperation>(0);
+    command.sequence = (_data_len > 2) ? _rx_buffer[7] : 0;
+    command.param_id = (_data_len > 3) ? _rx_buffer[8] : 0;
+
+    if (_data_len != COMPANION_PARAM_REQUEST_DATA_LENGTH) {
+        send_parameter_response(command, CompanionParamStatus::MALFORMED, NAN);
+        return;
+    }
+
+    command.value = decode_float_le(&_rx_buffer[9]);
+
+    if (command.version != COMPANION_PARAM_PROTOCOL_VERSION) {
+        send_parameter_response(command, CompanionParamStatus::BAD_VERSION, NAN);
+        return;
+    }
+
+    if (command.operation != CompanionParamOperation::SET_VOLATILE &&
+        command.operation != CompanionParamOperation::SET_PERSISTENT &&
+        command.operation != CompanionParamOperation::GET) {
+        send_parameter_response(command, CompanionParamStatus::BAD_OPERATION, NAN);
+        return;
+    }
+
+    if (_param_queue_count >= _param_queue.size()) {
+        send_parameter_response(command, CompanionParamStatus::BUSY, NAN);
+        return;
+    }
+
+    _param_queue[_param_queue_tail] = command;
+    _param_queue_tail = (_param_queue_tail + 1U) % _param_queue.size();
+    _param_queue_count++;
+}
+
+bool AP_CompanionComputer::pop_parameter_command(CompanionParamCommand &command)
+{
+    if (_param_queue_count == 0) {
+        return false;
+    }
+
+    command = _param_queue[_param_queue_head];
+    _param_queue_head = (_param_queue_head + 1U) % _param_queue.size();
+    _param_queue_count--;
+    return true;
 }
 
 
 // 解析系统控制命令
 void AP_CompanionComputer::parse_system_command()
 {
+    if (_data_len < 1) {
+        return;
+    }
+
     // 提取命令数据（假设命令数据在第四个字节）
     uint8_t cmd_data = _rx_buffer[5];
     uint8_t status = 0x01;
@@ -257,10 +323,19 @@ void AP_CompanionComputer::parse_system_command()
 // 校验数据包（从指令来源到数据体最后一位，加和取低八位）
 bool AP_CompanionComputer::validate_packet() const
 {
-    // 校验和在倒数第二个字节，结束符在最后一个字节
-    uint8_t calculated_checksum = calculate_checksum(_rx_buffer.data(), _rx_buffer.size()-2);
+    if (_rx_count != _data_len + 7 ||
+        _rx_count < 7 ||
+        _rx_buffer[0] != COMPANION_FRAME_HEADER1 ||
+        _rx_buffer[1] != COMPANION_FRAME_HEADER2 ||
+        _cmd_source != COMPANION_CMD_SOURCE_RCVR) {
+        return false;
+    }
 
-    return (calculated_checksum == _rx_buffer[_rx_count - 2]) && (_rx_buffer[_rx_count - 1] == 0xFF);
+    // 校验和在倒数第二个字节，结束符在最后一个字节
+    const uint8_t calculated_checksum = calculate_checksum(_rx_buffer.data(), _rx_count - 2);
+
+    return (calculated_checksum == _rx_buffer[_rx_count - 2]) &&
+           (_rx_buffer[_rx_count - 1] == COMPANION_END_SIGN);
 }
 
 void AP_CompanionComputer::send_data() 
@@ -347,6 +422,54 @@ void AP_CompanionComputer::send_response(uint8_t data, uint8_t status)
 
     // 通过串口发送数据
     _uart->write(response_buffer.data(), response_buffer.size());
+}
+
+void AP_CompanionComputer::send_parameter_response(const CompanionParamCommand &command,
+                                                    CompanionParamStatus status,
+                                                    float actual_value)
+{
+    if (!_enable || _uart == nullptr) {
+        return;
+    }
+
+    std::array<uint8_t, COMPANION_PARAM_RESPONSE_TOTAL_LENGTH> response_buffer{};
+    response_buffer[0] = COMPANION_FRAME_HEADER1;
+    response_buffer[1] = COMPANION_FRAME_HEADER2;
+    response_buffer[2] = COMPANION_CMD_SOURCE_FC;
+    response_buffer[3] = 0x02;
+    response_buffer[4] = COMPANION_PARAM_RESPONSE_DATA_LENGTH;
+    response_buffer[5] = COMPANION_PARAM_PROTOCOL_VERSION;
+    response_buffer[6] = static_cast<uint8_t>(command.operation) | 0x80U;
+    response_buffer[7] = command.sequence;
+    response_buffer[8] = command.param_id;
+    response_buffer[9] = static_cast<uint8_t>(status);
+    encode_float_le(actual_value, &response_buffer[10]);
+    response_buffer[response_buffer.size() - 2] =
+        calculate_checksum(response_buffer.data(), response_buffer.size() - 2);
+    response_buffer[response_buffer.size() - 1] = COMPANION_END_SIGN;
+
+    _uart->write(response_buffer.data(), response_buffer.size());
+}
+
+float AP_CompanionComputer::decode_float_le(const uint8_t *data) const
+{
+    const uint32_t raw = uint32_t(data[0]) |
+                         (uint32_t(data[1]) << 8U) |
+                         (uint32_t(data[2]) << 16U) |
+                         (uint32_t(data[3]) << 24U);
+    float value;
+    memcpy(&value, &raw, sizeof(value));
+    return value;
+}
+
+void AP_CompanionComputer::encode_float_le(float value, uint8_t *data) const
+{
+    uint32_t raw;
+    memcpy(&raw, &value, sizeof(raw));
+    data[0] = raw & 0xFFU;
+    data[1] = (raw >> 8U) & 0xFFU;
+    data[2] = (raw >> 16U) & 0xFFU;
+    data[3] = (raw >> 24U) & 0xFFU;
 }
 
 uint8_t AP_CompanionComputer::calculate_checksum(const uint8_t *data, uint8_t len) const 

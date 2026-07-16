@@ -1903,6 +1903,10 @@ class ModeFollowExt : public ModeGuided {
     bool is_autopilot() const override { return true; }
 
     void set_takeoff_status(bool desired_status){_takeoff_complete = desired_status;}
+    CompanionParamStatus handle_external_param(CompanionParamOperation operation,
+                                               uint8_t param_id,
+                                               float request_value,
+                                               float &actual_value);
 
     static const struct AP_Param::GroupInfo var_info[];
 

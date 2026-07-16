@@ -88,11 +88,20 @@ constexpr uint8_t COMPANION_CMD_SOURCE_RCVR   = 0xAA;
 constexpr uint8_t COMPANION_CMD_SOURCE_FC     = 0xBB;
 constexpr uint8_t COMPANION_END_SIGN          = 0xFF;
 constexpr uint8_t COMPANION_CMD_CONTENT       = 0x01;
-constexpr uint8_t COMPANION_RECV_TOTAL_LENGTH = 36;
+constexpr uint8_t COMPANION_CONTROL_RECV_TOTAL_LENGTH = 36;
 constexpr uint8_t COMPANION_RECV_DATA_LENGTH  = 0x1D;
+constexpr uint8_t COMPANION_MAX_RECV_TOTAL_LENGTH = 64;
+constexpr uint8_t COMPANION_MAX_RECV_DATA_LENGTH = COMPANION_MAX_RECV_TOTAL_LENGTH - 7;
 constexpr uint8_t COMPANION_SEND_TOTAL_LENGTH = 29;
 constexpr uint8_t COMPANION_SEND_DATA_LENGTH  = 0x16;
 constexpr uint8_t COMPANION_SEND_RESP_LENGTH  = 0x09;
+constexpr uint8_t COMPANION_PARAM_REQUEST_DATA_LENGTH = 0x08;
+constexpr uint8_t COMPANION_PARAM_RESPONSE_DATA_LENGTH = 0x09;
+constexpr uint8_t COMPANION_PARAM_RESPONSE_TOTAL_LENGTH = COMPANION_PARAM_RESPONSE_DATA_LENGTH + 7;
+constexpr uint8_t COMPANION_PARAM_PROTOCOL_VERSION = 0x01;
+constexpr uint8_t COMPANION_PARAM_QUEUE_SIZE = 4;
+
+static_assert(sizeof(float) == 4, "Companion parameter protocol requires 32-bit float");
 
 // 控制模式枚举
 enum class CompanionCtrlMode : uint8_t {
@@ -126,6 +135,9 @@ struct CompanionReceivePacket {
 };
 #pragma pack(pop)
 
+static_assert(sizeof(CompanionReceivePacket) == COMPANION_CONTROL_RECV_TOTAL_LENGTH,
+              "CompanionReceivePacket must remain compatible with the 36-byte control frame");
+
 // 发送包结构
 #pragma pack(push, 1)
 struct CompanionSendPacket {
@@ -148,6 +160,9 @@ struct CompanionSendPacket {
 };
 #pragma pack(pop)
 
+static_assert(sizeof(CompanionSendPacket) == COMPANION_SEND_TOTAL_LENGTH,
+              "CompanionSendPacket size does not match the serial protocol");
+
 struct ParsedPacket
 {
     uint8_t ctrl_mode;
@@ -164,14 +179,30 @@ struct ParsedPacket
     float yaw_max_rate;
 };
 
-struct Mode1Param
-{
-    float _kp_yaw;
-    float _kp_thr;
-    float _kd_yaw;
-    float _kd_thr;
-    float _speed;
-    float _alpha;
+enum class CompanionParamOperation : uint8_t {
+    SET_VOLATILE = 0x01,
+    SET_PERSISTENT = 0x02,
+    GET = 0x03,
+};
+
+enum class CompanionParamStatus : uint8_t {
+    OK = 0x00,
+    BAD_VERSION = 0x01,
+    BAD_OPERATION = 0x02,
+    UNKNOWN_PARAM = 0x03,
+    INVALID_VALUE = 0x04,
+    NOT_SUPPORTED = 0x05,
+    SAVE_FAILED = 0x06,
+    BUSY = 0x07,
+    MALFORMED = 0x08,
+};
+
+struct CompanionParamCommand {
+    uint8_t version;
+    CompanionParamOperation operation;
+    uint8_t sequence;
+    uint8_t param_id;
+    float value;
 };
 
 // 数据包构建器

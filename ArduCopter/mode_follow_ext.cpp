@@ -36,11 +36,13 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     //  @Param: FOLE_KP_YAW
     //  @DisplayName: Follow mode P gain on yaw
     //  @Description: Proportional gain in follow mode
+    //  @Range: -1000 1000
     //  @User: Advanced
     AP_GROUPINFO("KP_YAW", 2, ModeFollowExt, _kp_yaw, 0.05f),
     // @Param: FOLE_KP_THR
     // @DisplayName: Follow mode I gain on throttle
     // @Description: Proportional gain in follow mode
+    // @Range: -1000 1000
     // @User: Advanced
     AP_GROUPINFO("KP_THR", 3, ModeFollowExt, _kp_thr, 0.1f),
     // @Param: FOLE_KD_YAW
@@ -56,6 +58,8 @@ const AP_Param::GroupInfo ModeFollowExt::var_info[] = {
     //@Param: FOLE_SPEED
     //@DisplayName: Follow mode speed
     //@Description: Fixed speed(cm/s)
+    //@Range: 0 10000
+    //@Units: cm/s
     //@User: Advanced
     AP_GROUPINFO("SPEED", 6, ModeFollowExt, _speed, 1000.0f),
     //@Param: FOLE_ALPHA
@@ -75,11 +79,94 @@ ModeFollowExt::ModeFollowExt(void)
 // 初始化
 bool ModeFollowExt::init(const bool ignore_checks)
 {
+    if (!_followext_enabled) {
+        return false;
+    }
+
     gcs().send_text(MAV_SEVERITY_DEBUG, "entry FOLLOW_EXT");
     y_err = 0;
     z_err = 0;
     last_log_ms = 0;
     return ModeGuided::init(ignore_checks);
+}
+
+CompanionParamStatus ModeFollowExt::handle_external_param(CompanionParamOperation operation,
+                                                          uint8_t param_id,
+                                                          float request_value,
+                                                          float &actual_value)
+{
+    actual_value = NAN;
+
+    if (operation != CompanionParamOperation::SET_VOLATILE &&
+        operation != CompanionParamOperation::SET_PERSISTENT &&
+        operation != CompanionParamOperation::GET) {
+        return CompanionParamStatus::BAD_OPERATION;
+    }
+
+    const bool persistent = operation == CompanionParamOperation::SET_PERSISTENT;
+    const bool get_only = operation == CompanionParamOperation::GET;
+
+    auto handle_float = [persistent, get_only, request_value, &actual_value](AP_Float &param,
+                                                                            float minimum,
+                                                                            float maximum) {
+        if (!get_only) {
+            if (!isfinite(request_value) || request_value < minimum || request_value > maximum) {
+                actual_value = param.get();
+                return CompanionParamStatus::INVALID_VALUE;
+            }
+            if (persistent) {
+                param.set_and_save(request_value);
+            } else {
+                param.set(request_value);
+            }
+        }
+        actual_value = param.get();
+        return CompanionParamStatus::OK;
+    };
+
+    switch (param_id) {
+    case 0x01: // FOLE_AUTO_ENABLE
+        if (!get_only) {
+            if (!isfinite(request_value) ||
+                request_value < 0.0f ||
+                request_value > 1.0f ||
+                (request_value > 0.0f && request_value < 1.0f)) {
+                actual_value = _followext_enabled.get();
+                return CompanionParamStatus::INVALID_VALUE;
+            }
+            const int8_t enabled = static_cast<int8_t>(request_value);
+            if (persistent) {
+                _followext_enabled.set_and_save(enabled);
+            } else {
+                _followext_enabled.set(enabled);
+            }
+        }
+        actual_value = _followext_enabled.get();
+        return CompanionParamStatus::OK;
+
+    case 0x02: // FOLE_KP_YAW
+        return handle_float(_kp_yaw, -1000.0f, 1000.0f);
+
+    case 0x03: // FOLE_KP_THR
+        return handle_float(_kp_thr, -1000.0f, 1000.0f);
+
+    case 0x04: // FOLE_KD_YAW (not used by the current controller)
+        actual_value = _kd_yaw.get();
+        return get_only ? CompanionParamStatus::OK : CompanionParamStatus::NOT_SUPPORTED;
+
+    case 0x05: // FOLE_KD_THR (not used by the current controller)
+        actual_value = _kd_thr.get();
+        return get_only ? CompanionParamStatus::OK : CompanionParamStatus::NOT_SUPPORTED;
+
+    case 0x06: // FOLE_SPEED, cm/s
+        return handle_float(_speed, 0.0f, 10000.0f);
+
+    case 0x07: // FOLE_ALPHA
+        return handle_float(_alpha, 0.0f, 1.0f);
+
+    default:
+        return CompanionParamStatus::UNKNOWN_PARAM;
+    }
 }
 
 void ModeFollowExt::run()
@@ -100,16 +187,6 @@ void ModeFollowExt::run()
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
     case 1: { // 视觉导引模式
-        // if (cc.is_new_param()) {
-        //     cc.clear_new_param_flag();
-        //     Mode1Param param = cc.get_mode1_param();
-        //     _kd_thr.set_and_save(param._kd_thr);
-        //     _kp_thr.set_and_save(param._kp_thr);
-        //     _kd_yaw.set_and_save(param._kd_yaw);
-        //     _kp_yaw.set_and_save(param._kp_yaw);
-        //     _speed.set_and_save(param._speed);
-        //     _alpha.set_and_save(param._alpha);
-        // }
         /*  定姿
         // 1. 误差量（机体坐标，m）
         // float x_err = pkt.x_axis_err; // 前，用不到
@@ -162,8 +239,13 @@ void ModeFollowExt::run()
         float v_ref = 500.0f;              // 参考速度
         float speed_ratio = v_now / v_ref; // >1 = 高速，<1 = 低速
         float k = 0.5f;
-        float kp_thr_eff = _kp_thr * sqrtf(0.5f + k * speed_ratio * speed_ratio);
-        kp_thr_eff = constrain_float(kp_thr_eff, _kp_thr * 0.5f, _kp_thr * 2.0f);
+        const float kp_thr = _kp_thr.get();
+        float kp_thr_eff = kp_thr * sqrtf(0.5f + k * speed_ratio * speed_ratio);
+        const float kp_thr_limit_a = kp_thr * 0.5f;
+        const float kp_thr_limit_b = kp_thr * 2.0f;
+        kp_thr_eff = constrain_float(kp_thr_eff,
+                                     MIN(kp_thr_limit_a, kp_thr_limit_b),
+                                     MAX(kp_thr_limit_a, kp_thr_limit_b));
         float climb_rate_cms = kp_thr_eff * z_err;
         climb_rate_cms = constrain_float(climb_rate_cms, -200.0f, 200.0f);
 
@@ -172,8 +254,8 @@ void ModeFollowExt::run()
         vel_vector.y = 0;
         vel_vector.z = climb_rate_cms;
         for (uint8_t i = 0; i < 3; i++) {
-            // consider velocity invalid if any component nan or >1000(m/s or m/s/s)
-            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 3000) {
+            // consider velocity invalid if any component is NaN or exceeds 10000 cm/s
+            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 10000.0f) {
                copter.mode_guided.init(true); 
             }
         }

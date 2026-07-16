@@ -21,16 +21,17 @@ public:
     void init();
     void update();
     void send_data();
+    bool pop_parameter_command(CompanionParamCommand &command);
+    void send_parameter_response(const CompanionParamCommand &command,
+                                 CompanionParamStatus status,
+                                 float actual_value);
     
     bool is_new_mode() { return _new_mode_flag; }
-    bool is_new_param() { return _new_param_flag; }
     void clear_new_mode_flag() { _new_mode_flag = false; }
-    void clear_new_param_flag() { _new_param_flag = false; }
 
     AP_Int8 enabled() { return _enable; };
     
     const CompanionReceivePacket& get_received_packet() const { return _received_packet; }
-    const Mode1Param& get_mode1_param() const { return _param; }
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -57,7 +58,7 @@ private:
 
     // received buff
     CompanionReceivePacket _received_packet;
-    std::array<uint8_t, COMPANION_RECV_TOTAL_LENGTH> _rx_buffer;
+    std::array<uint8_t, COMPANION_MAX_RECV_TOTAL_LENGTH> _rx_buffer;
     uint8_t _rx_count;
     uint32_t _rx_start_time;
     uint32_t _last_sent_ms;
@@ -67,10 +68,15 @@ private:
     uint8_t _cmd_type;
     uint8_t _data_len;
     
-    // Mode and parameter flags
+    // Mode flag
     uint8_t _last_ctrl_mode = 9; // 初始值不等于任何模式
     bool _new_mode_flag = false;
-    bool _new_param_flag = false;
+
+    // Parameter command queue
+    std::array<CompanionParamCommand, COMPANION_PARAM_QUEUE_SIZE> _param_queue;
+    uint8_t _param_queue_head = 0;
+    uint8_t _param_queue_tail = 0;
+    uint8_t _param_queue_count = 0;
     
     // Logging
     uint32_t _log_c2hc_bit = -1;
@@ -84,14 +90,14 @@ private:
     void parse_parameter_data();
     void parse_system_command();
     void send_response(uint8_t data, uint8_t status);
+    void reset_rx_state();
     
     // Utility functions
     uint8_t calculate_checksum(const uint8_t *data, uint8_t len) const;
     bool validate_packet() const;
+    float decode_float_le(const uint8_t *data) const;
+    void encode_float_le(float value, uint8_t *data) const;
     void Log_C2HC() const;
-    
-    // Data structures
-    Mode1Param _param;
 };
 
 namespace AP {
