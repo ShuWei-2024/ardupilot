@@ -1925,6 +1925,9 @@ class ModeFollowExt : public ModeGuided {
     int32_t _last_altitude = 0;
     float y_err = 0;
     float z_err = 0;
+    float _last_y_err = 0;
+    uint32_t _last_vision_update_ms = 0;
+    bool _yaw_derivative_valid = false;
     bool _control_packet_timed_out = false;
     bool _velocity_invalid_reported = false;
 
