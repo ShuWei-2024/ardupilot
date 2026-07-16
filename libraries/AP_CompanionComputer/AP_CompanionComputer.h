@@ -32,6 +32,7 @@ public:
     AP_Int8 enabled() { return _enable; };
     
     const CompanionReceivePacket& get_received_packet() const { return _received_packet; }
+    uint32_t get_last_control_packet_ms() const { return _last_control_packet_ms; }
     void set_c2hc_log_bit(uint32_t log_c2hc_bit) { _log_c2hc_bit = log_c2hc_bit; }
 
     static const struct AP_Param::GroupInfo var_info[];
@@ -62,6 +63,7 @@ private:
     uint8_t _rx_count;
     uint32_t _rx_start_time;
     uint32_t _last_sent_ms;
+    uint32_t _last_control_packet_ms = 0;
     
     // Command info
     uint8_t _cmd_source;

@@ -130,6 +130,16 @@ calculate_checksum(_rx_buffer.data(), _rx_count - 2);
 
 其中 `_rx_count - 2` 排除了 checksum 和结束位，并使求和函数只处理本帧真实数据。
 
+### 6.4 控制包接收时间
+
+每次成功解析长度正确、checksum 正确的 `0x01` 飞行控制帧后，通信库记录：
+
+```cpp
+_last_control_packet_ms = AP_HAL::millis();
+```
+
+`ModeFollowExt` 通过 `get_last_control_packet_ms()` 读取该时间。参数帧和系统控制帧不会刷新控制包时间，因此它们不能掩盖飞行控制链路中断。
+
 ## 7. 参数请求解析
 
 `parse_parameter_data()` 负责协议层工作，不直接访问 `ModeFollowExt` 参数。
@@ -239,6 +249,40 @@ GET            -> AP_Param::get()
 所有 SET 都先检查 `isfinite()`。越界值直接拒绝，不进行静默限幅。
 
 `FOLE_AUTO_ENABLE` 当前只在 `ModeFollowExt::init()` 入口检查。运行中将它设置为 0 不会强制退出当前模式。
+
+### 10.5 控制包超时保护
+
+`ModeFollowExt` 使用固定 500 ms 控制包超时：
+
+```cpp
+static constexpr uint32_t CONTROL_PACKET_TIMEOUT_MS = 500;
+```
+
+若从未收到控制包，或最后一个有效控制包已超过该时间，模式将：
+
+1. 清零 `y_err` 和 `z_err`；
+2. 向当前 `ModeFollowExt` 的 Guided 控制器提交零 NEU 速度；
+3. 显式提交零偏航角速度；
+4. 继续调用 `ModeGuided::run()`，使位置和姿态控制环保持运行；
+5. 超时开始时发送一次 `FOLLOW_EXT: control timeout`；
+6. 链路恢复时发送一次 `FOLLOW_EXT: control restored`。
+
+这里不能只依赖 `GUID_TIMEOUT`。如果模式不断使用旧数据调用 `set_velocity()`，Guided 的内部更新时间会被持续刷新，原生超时永远不会发生。现在使用通信层独立记录的真实收包时间解决这一问题。
+
+### 10.6 非法速度保护
+
+速度命令提交前会检查每个分量：
+
+```cpp
+isfinite(velocity) && fabsf(velocity) <= 10000.0f
+```
+
+发现非法分量后，代码不再调用独立的 `copter.mode_guided.init()`，因为它不是当前运行的 `ModeFollowExt` 对象。当前实现会：
+
+- 向本模式提交零速度和零偏航角速度；
+- 跳过异常追踪命令；
+- 继续运行当前 Guided 控制环；
+- 每次故障持续期间只发送一次错误提示，避免 GCS 消息刷屏。
 
 ## 11. 参数应答
 

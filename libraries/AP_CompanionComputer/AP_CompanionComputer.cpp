@@ -175,6 +175,7 @@ void AP_CompanionComputer::parse_flight_control_data()
 
     _received_packet =
         PacketBuilder::deserialize<CompanionReceivePacket>(_rx_buffer.data());
+    _last_control_packet_ms = AP_HAL::millis();
     // _parsed_packet = {
     //     .ctrl_mode = _received_packet.ctrl_mode,
     //     .x_axis_err = _received_packet.x_axis_err,

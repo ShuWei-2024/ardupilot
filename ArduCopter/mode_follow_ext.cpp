@@ -87,6 +87,8 @@ bool ModeFollowExt::init(const bool ignore_checks)
     y_err = 0;
     z_err = 0;
     last_log_ms = 0;
+    _control_packet_timed_out = false;
+    _velocity_invalid_reported = false;
     return ModeGuided::init(ignore_checks);
 }
 
@@ -184,6 +186,40 @@ void ModeFollowExt::run()
     auto &cc = AP::companioncomputer();
     const CompanionReceivePacket pkt = cc.get_received_packet(); // 结构体拷贝，线程安全
 
+    // Do not keep refreshing Guided with an old command when the companion
+    // computer stops sending control packets.  Explicitly command a hover so
+    // the last forward velocity and yaw-rate cannot remain active forever.
+    const uint32_t last_control_packet_ms = cc.get_last_control_packet_ms();
+    const bool control_packet_timed_out =
+        last_control_packet_ms == 0 ||
+        now - last_control_packet_ms > CONTROL_PACKET_TIMEOUT_MS;
+    if (control_packet_timed_out) {
+        const bool timeout_started = !_control_packet_timed_out;
+        _control_packet_timed_out = true;
+        y_err = 0;
+        z_err = 0;
+
+        if (timeout_started) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "FOLLOW_EXT: control timeout");
+        }
+
+        if (timeout_started || ten_hz_flag) {
+            const Vector3f zero_velocity_neu_cms{0.0f, 0.0f, 0.0f};
+            ModeGuided::set_velocity(zero_velocity_neu_cms,
+                                     false, 0.0f,
+                                     true, 0.0f,
+                                     false,
+                                     false);
+        }
+        ModeGuided::run();
+        return;
+    }
+
+    if (_control_packet_timed_out) {
+        _control_packet_timed_out = false;
+        gcs().send_text(MAV_SEVERITY_INFO, "FOLLOW_EXT: control restored");
+    }
+
     /* 5. 根据 ctrl_mode 决定控制方式 */
     switch (pkt.ctrl_mode) {
     case 1: { // 视觉导引模式
@@ -253,12 +289,28 @@ void ModeFollowExt::run()
         vel_vector.x = _speed;
         vel_vector.y = 0;
         vel_vector.z = climb_rate_cms;
+        bool velocity_invalid = false;
         for (uint8_t i = 0; i < 3; i++) {
-            // consider velocity invalid if any component is NaN or exceeds 10000 cm/s
-            if (isnan(vel_vector[i]) || fabsf(vel_vector[i]) > 10000.0f) {
-               copter.mode_guided.init(true); 
+            // consider velocity invalid if any component is non-finite or exceeds 10000 cm/s
+            if (!isfinite(vel_vector[i]) || fabsf(vel_vector[i]) > 10000.0f) {
+                velocity_invalid = true;
+                break;
             }
         }
+        if (velocity_invalid) {
+            if (!_velocity_invalid_reported) {
+                _velocity_invalid_reported = true;
+                gcs().send_text(MAV_SEVERITY_ERROR, "FOLLOW_EXT: invalid velocity");
+            }
+            const Vector3f zero_velocity_neu_cms{0.0f, 0.0f, 0.0f};
+            ModeGuided::set_velocity(zero_velocity_neu_cms,
+                                     false, 0.0f,
+                                     true, 0.0f,
+                                     false,
+                                     false);
+            break;
+        }
+        _velocity_invalid_reported = false;
         copter.rotate_body_frame_to_NE(vel_vector.x, vel_vector.y);
         ModeGuided::set_velocity(vel_vector,         // NEU cm/s 向上是正
                                  false, 0,            // 不指定绝对 yaw

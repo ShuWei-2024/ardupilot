@@ -400,6 +400,8 @@ find_serial(AP_SerialManager::SerialProtocol_2CC, 0)
 5. 不进入 `FOLLOW_EXT` 时设置参数，确认仍能成功。
 6. 进入 `FOLLOW_EXT` case 1 后修改速度和增益，确认控制器读取的是参数对象新值。
 7. 使用地面站读取 `FOLE_*`，确认串口设置与 MAVLink 参数系统看到的值一致。
+8. 在追踪飞行中停止发送控制帧，确认 500 ms 后目标速度和偏航角速度归零；恢复发包后确认控制恢复。
+9. 构造非法速度向量，确认当前 `ModeFollowExt` 下发零速度，且不会初始化另一个 `mode_guided` 对象。
 
 ### 9.3 实飞安全顺序
 
