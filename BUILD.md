@@ -76,6 +76,14 @@ list some basic and more used commands as example.
     ./waf configure --board sitl --debug   # software-in-the-loop simulator with debug symbols
 
     ```
+    git submodule update --init --recursive
+    ./waf distclean
+    ./waf configure --board BiAnH743V6-NJUST --bootloader
+    ./waf bootloader
+    cp build/BiAnH743V6-NJUST/bin/AP_Bootloader.bin    Tools/bootloaders/BiAnH743V6-NJUST_bl.bin
+    ./waf distclean
+    ./waf configure --board BiAnH743V6-NJUST
+    ./waf copter
 
 * **List of available vehicle types**
 
