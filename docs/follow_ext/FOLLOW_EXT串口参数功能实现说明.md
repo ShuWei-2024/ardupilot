@@ -241,10 +241,20 @@ GET            -> AP_Param::get()
 | `0x01` | `FOLE_AUTO_ENABLE` | 只接受 0/1；0 会阻止下一次进入模式 |
 | `0x02` | `FOLE_KP_YAW` | 接受 -1000.0～1000.0 |
 | `0x03` | `FOLE_KP_THR` | 接受 -1000.0～1000.0；负值会反转控制方向 |
-| `0x04` | `FOLE_KD_YAW` | 返回 `NOT_SUPPORTED`，GET 可用 |
+| `0x04` | `FOLE_KD_YAW` | 接受 -1000.0～1000.0 |
 | `0x05` | `FOLE_KD_THR` | 返回 `NOT_SUPPORTED`，GET 可用 |
 | `0x06` | `FOLE_SPEED` | 接受 0～10000 cm/s |
 | `0x07` | `FOLE_ALPHA` | 接受 0.0～1.0 |
+| `0x08` | `FOLE_ERR_SLOW_EN` | 只接受 0 或 1 |
+| `0x09` | `FOLE_TURN_LIM_EN` | 只接受 0 或 1 |
+| `0x0A` | `FOLE_CLB_SPD_EN` | 只接受 0 或 1 |
+| `0x0B` | `FOLE_TURN_FF_EN` | 只接受 0 或 1 |
+| `0x0C` | `FOLE_YAW_D_EN` | 只接受 0 或 1 |
+| `0x0D` | `FOLE_ERR_SLOW_SC` | 接受 0.001～100000.0 |
+| `0x0E` | `FOLE_VERT_ERR_WT` | 接受 0.0～100.0 |
+| `0x0F` | `FOLE_MIN_SPD_MUL` | 接受 0.0～1.0 |
+| `0x10` | `FOLE_TURN_ACC_RT` | 接受 0.0～1.0 |
+| `0x11` | `FOLE_MIN_YAW_RT` | 接受 0.0～10.0 rad/s |
 
 所有 SET 都先检查 `isfinite()`。越界值直接拒绝，不进行静默限幅。
 

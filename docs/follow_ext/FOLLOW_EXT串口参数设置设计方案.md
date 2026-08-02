@@ -57,6 +57,16 @@ ModeFollowExt::run()
 | `0x05` | `FOLE_KD_THR` | `AP_Float` | 0.0 | 已定义，但当前控制律没有使用 |
 | `0x06` | `FOLE_SPEED` | `AP_Float` | 1000 | 前向速度，单位 cm/s |
 | `0x07` | `FOLE_ALPHA` | `AP_Float` | 1.0 | 误差低通滤波系数 |
+| `0x08` | `FOLE_ERR_SLOW_EN` | `AP_Int8` | 1 | 视觉误差减速开关 |
+| `0x09` | `FOLE_TURN_LIM_EN` | `AP_Int8` | 1 | 转弯加速度限速开关 |
+| `0x0A` | `FOLE_CLB_SPD_EN` | `AP_Int8` | 1 | 速度无关爬升开关 |
+| `0x0B` | `FOLE_TURN_FF_EN` | `AP_Int8` | 1 | 转弯加速度前馈开关 |
+| `0x0C` | `FOLE_YAW_D_EN` | `AP_Int8` | 1 | 偏航 D 项开关 |
+| `0x0D` | `FOLE_ERR_SLOW_SC` | `AP_Float` | 350.0 | 误差减速尺度 |
+| `0x0E` | `FOLE_VERT_ERR_WT` | `AP_Float` | 0.8 | 垂向误差权重 |
+| `0x0F` | `FOLE_MIN_SPD_MUL` | `AP_Float` | 0.2 | 误差减速后的最小速度倍率 |
+| `0x10` | `FOLE_TURN_ACC_RT` | `AP_Float` | 0.6 | 转弯加速度预算比例 |
+| `0x11` | `FOLE_MIN_YAW_RT` | `AP_Float` | 0.0349 | 转弯限速最小偏航角速度，单位 rad/s |
 
 ### 2.2 当前参数预留代码
 
@@ -209,14 +219,23 @@ A5 5A BB 02 09  01 83 2B 06 00 00 00 7A 44  39 FF
 | `FOLE_AUTO_ENABLE` | 0 或 1 | 增加实际启停语义后再开放远程设置 |
 | `FOLE_KP_YAW` | -1000.0 ～ 1000.0 | 必须是有限值 |
 | `FOLE_KP_THR` | -1000.0 ～ 1000.0 | 必须是有限值；负增益会反转高度误差控制方向 |
-| `FOLE_KD_YAW` | 0.0 ～ 5.0 | 当前未使用；建议返回 `NOT_SUPPORTED` |
-| `FOLE_KD_THR` | 0.0 ～ 5.0 | 当前未使用；建议返回 `NOT_SUPPORTED` |
+| `FOLE_KD_YAW` | -1000.0 ～ 1000.0 | 必须是有限值 |
+| `FOLE_KD_THR` | -1000.0 ～ 1000.0 | 当前未使用，但允许读写；设置成功不代表当前控制生效 |
 | `FOLE_SPEED` | 0 ～ 10000 cm/s | 与当前速度异常检查上限保持一致 |
 | `FOLE_ALPHA` | 0.0 ～ 1.0 | 当前 `run()` 虽有限幅，设置入口仍应拒绝越界值 |
+| `FOLE_ERR_SLOW_EN` | 0 或 1 | 视觉误差减速开关 |
+| `FOLE_TURN_LIM_EN` | 0 或 1 | 转弯加速度限速开关 |
+| `FOLE_CLB_SPD_EN` | 0 或 1 | 速度无关爬升开关 |
+| `FOLE_TURN_FF_EN` | 0 或 1 | 转弯加速度前馈开关 |
+| `FOLE_YAW_D_EN` | 0 或 1 | 偏航 D 项开关 |
+| `FOLE_ERR_SLOW_SC` | 0.001 ～ 100000.0 | 必须大于 0，避免误差减速除零 |
+| `FOLE_VERT_ERR_WT` | 0.0 ～ 100.0 | 垂向误差权重 |
+| `FOLE_MIN_SPD_MUL` | 0.0 ～ 1.0 | 误差减速后的最小速度倍率 |
+| `FOLE_TURN_ACC_RT` | 0.0 ～ 1.0 | 转弯加速度预算比例 |
+| `FOLE_MIN_YAW_RT` | 0.0 ～ 10.0 rad/s | 转弯限速最小偏航角速度 |
 
 当前 `_followext_enabled` 已在 `ModeFollowExt::init()` 开头检查；设置为 0 后将拒绝下一次进入 `FOLLOW_EXT`。它不会强制退出已经在运行的模式。
 
-当前两个 KD 参数没有进入控制律。第一版协议可以保留 ID，但 SET 返回 `NOT_SUPPORTED`；等微分项真正实现后再改为可写。也可以允许保存它们，但文档和应答必须明确“保存成功不代表当前控制生效”，前一种做法更不容易误用。
 
 ## 6. 代码修改方案
 

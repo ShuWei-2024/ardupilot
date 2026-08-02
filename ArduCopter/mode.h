@@ -1940,6 +1940,16 @@ class ModeFollowExt : public ModeGuided {
     AP_Float _kd_thr;
     AP_Float _speed;
     AP_Float _alpha;
+    AP_Int8 _enable_error_slowdown;
+    AP_Int8 _enable_turn_accel_limit;
+    AP_Int8 _enable_speed_independent_climb;
+    AP_Int8 _enable_turn_accel_feedforward;
+    AP_Int8 _enable_yaw_d_term;
+    AP_Float _error_slowdown_scale;
+    AP_Float _vertical_error_weight;
+    AP_Float _min_speed_multiplier;
+    AP_Float _turn_accel_budget_ratio;
+    AP_Float _min_yaw_rate_rad_s;
 };
 #endif
 
